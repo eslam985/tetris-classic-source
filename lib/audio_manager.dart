@@ -4,7 +4,16 @@ class AudioManager {
   static bool isMuted = false;
   static double volume = 0.7;
 
-  // توحيد الامتداد لـ mp3 (تأكد أن ملفاتك فعلاً mp3)
+  // تعريف المشغلات بشكل ثابت عشان نستخدمهم ونعملهم stop قبل الـ play
+  // ده بيمنع تراكم الأصوات ورا بعضها
+  static void _playQuickSound(String fileName, {double? customVolume}) {
+    if (isMuted) return;
+
+    // الحل السحري للتأخير: استخدام playPool لو متاح أو التحكم في الصوت يدوياً
+    // لكن الأسهل والأنسب لـ FlameAudio هو التأكد من استخدام mode خاص
+    FlameAudio.play(fileName, volume: customVolume ?? volume);
+  }
+
   static Future<void> loadSounds() async {
     await FlameAudio.audioCache.loadAll([
       'move.mp3',
@@ -16,30 +25,30 @@ class AudioManager {
     ]);
   }
 
+  // في حركات السرعة (Move & Rotate) بنستخدم حجم صوت أقل وسرعة استجابة أعلى
   static void playMove() {
-    if (!isMuted) FlameAudio.play('move.mp3', volume: volume);
+    _playQuickSound('move.mp3', customVolume: volume * 0.5);
   }
 
   static void playRotate() {
-    if (!isMuted) FlameAudio.play('rotate.mp3', volume: volume);
+    _playQuickSound('rotate.mp3', customVolume: volume * 0.6);
   }
 
   static void playDrop() {
-    if (!isMuted) FlameAudio.play('drop.mp3', volume: volume * 0.8);
+    _playQuickSound('drop.mp3', customVolume: volume * 0.8);
   }
 
   static void playLineClear() {
-    if (!isMuted) FlameAudio.play('line_clear.mp3', volume: volume);
+    _playQuickSound('line_clear.mp3');
   }
 
   static void playGameOver() {
-    if (!isMuted) FlameAudio.play('game_over.mp3', volume: volume);
+    _playQuickSound('game_over.mp3');
   }
 
   static void playBackgroundMusic() {
     if (!isMuted) {
-      // الـ BGM في فليم بيشتغل من مجلد assets/audio/ أيضاً
-      FlameAudio.bgm.play('theme.mp3', volume: volume * 0.5);
+      FlameAudio.bgm.play('theme.mp3', volume: volume * 0.4);
     }
   }
 

@@ -19,7 +19,7 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
-          flutter-version: '3.27.0' # ضروري جداً لمنع أخطاء الـ Deprecated
+          flutter-version: '3.27.0'
 
       - name: Get dependencies
         run: flutter pub get
@@ -28,19 +28,22 @@ jobs:
         run: flutter build web --release --base-href "/tetris-classic-source/"
 
       - name: Build Android APK
-        run: flutter build apk --debug
+        run: flutter build apk --release  # غيرناها لـ release عشان تكون النسخة النهائية
 
       - name: Build Windows EXE
         run: flutter build windows --release
 
-      - name: Upload Artifacts
+      - name: Upload Android APK
         uses: actions/upload-artifact@v4
         with:
-          name: game-builds
-          path: |
-            build/app/outputs/flutter-apk/app-debug.apk
-            build/windows/runner/Release/
-            build/web/
+          name: Android-Game-v1.0.2
+          path: build/app/outputs/flutter-apk/app-release.apk
+
+      - name: Upload Windows EXE
+        uses: actions/upload-artifact@v4
+        with:
+          name: Windows-Game-v1.0.2
+          path: build/windows/x64/runner/Release/ # ده المسار الصحيح للـ EXE في النسخ الجديدة
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3

@@ -358,8 +358,8 @@ class _TetrisHomePageState extends State<TetrisHomePage> {
 
         // 3. لوحة التحكم (الدراع) - أسفل الشاشة بعيد عن منطقة اللعب
         Container(
-          height: 220,
-          padding: const EdgeInsets.only(bottom: 20, top: 10),
+          height: 180, // قللنا الارتفاع شوية عشان نلم الأزرار لتحت
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 20),
           decoration: const BoxDecoration(
             color: Color(0xFF1D1E33),
             borderRadius: BorderRadius.only(
@@ -367,23 +367,28 @@ class _TetrisHomePageState extends State<TetrisHomePage> {
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            crossAxisAlignment:
+                CrossAxisAlignment.center, // يخلي كل الأزرار على خط واحد
             children: [
-              // أزرار الحركة والتدوير
+              // زر اليسار - أخضر فاقع وكبير
               _buildCircleControl(Icons.arrow_back, () => _game.moveLeft(),
-                  Colors.grey[800]!, "Left"),
-              Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  _buildCircleControl(Icons.arrow_upward,
-                      () => _game.rotate(), Colors.blue, "Rotate"),
-                  const SizedBox(height: 15),
-                  _buildCircleControl(Icons.keyboard_double_arrow_down,
-                      () => _game.hardDrop(), Colors.redAccent, "DROP",
-                      size: 65),
-                ],
-              ),
+                  Colors.greenAccent[700]!, "Left",
+                  size: 75),
+
+              // زر الروتيت - أزرق فاقع وبنفس الحجم ونزل جنبهم
+              _buildCircleControl(Icons.rotate_right, () => _game.rotate(),
+                  Colors.cyanAccent[400]!, "Rotate",
+                  size: 75),
+
+              // زر اليمين - أخضر فاقع وكبير
               _buildCircleControl(Icons.arrow_forward, () => _game.moveRight(),
-                  Colors.grey[800]!, "Right"),
+                  Colors.greenAccent[700]!, "Right",
+                  size: 75),
+
+              // زر الدروب - أحمر فاقع وكبير
+              _buildCircleControl(Icons.keyboard_double_arrow_down,
+                  () => _game.hardDrop(), Colors.redAccent[400]!, "DROP",
+                  size: 75),
             ],
           ),
         ),
@@ -670,24 +675,30 @@ class _TetrisHomePageState extends State<TetrisHomePage> {
       ),
     );
   }
-  Widget _buildCircleControl(IconData icon, VoidCallback onTap, Color color, String label, {double size = 55}) {
-  return Column(
-    children: [
-      GestureDetector(
-        onTapDown: (_) => onTap(),
-        child: Container(
-          width: size,
-          height: size,
-          decoration: BoxDecoration(
-            color: color, 
-            shape: BoxShape.circle, 
-            boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 5)]
+
+  Widget _buildCircleControl(
+      IconData icon, VoidCallback onTap, Color color, String label,
+      {double size = 55}) {
+    return Column(
+      children: [
+        GestureDetector(
+          onTapDown: (_) => onTap(),
+          child: Container(
+            width: size,
+            height: size,
+            decoration: BoxDecoration(
+                color: color,
+                shape: BoxShape.circle,
+                boxShadow: const [
+                  BoxShadow(color: Colors.black26, blurRadius: 5)
+                ]),
+            child: Icon(icon, color: Colors.white, size: size * 0.6),
           ),
-          child: Icon(icon, color: Colors.white, size: size * 0.6),
         ),
-      ),
-      if (label.isNotEmpty) Text(label, style: const TextStyle(fontSize: 10, color: Colors.white54)),
-    ],
-  );
-}
+        if (label.isNotEmpty)
+          Text(label,
+              style: const TextStyle(fontSize: 10, color: Colors.white54)),
+      ],
+    );
+  }
 }
