@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flame/game.dart';
 import 'tetris_game.dart';
 import 'next_piece_display.dart';
-import 'audio_manager.dart';  // أضف هذا الاستيراد
+import 'audio_manager.dart'; // أضف هذا الاستيراد
 
 void main() {
   runApp(const MyApp());
@@ -34,7 +34,7 @@ class TetrisHomePage extends StatefulWidget {
 class _TetrisHomePageState extends State<TetrisHomePage> {
   bool _isGameRunning = false;
   bool _isPaused = false;
-  bool _isMuted = false;  // متغير جديد للصوت
+  bool _isMuted = false; // متغير جديد للصوت
   late TetrisGame _game;
 
   @override
@@ -84,7 +84,7 @@ class _TetrisHomePageState extends State<TetrisHomePage> {
         child: LayoutBuilder(
           builder: (context, constraints) {
             final screenWidth = constraints.maxWidth;
-            
+
             if (_isGameRunning) {
               if (screenWidth > 1000) {
                 return _buildWideDesktopLayout();
@@ -180,26 +180,17 @@ class _TetrisHomePageState extends State<TetrisHomePage> {
                       ),
                     ],
                   ),
-                  
                   const SizedBox(height: 30),
-                  
                   _buildStatsSection(),
-                  
                   const SizedBox(height: 30),
-                  
                   _buildNextPieceSection(),
-                  
                   const SizedBox(height: 30),
-                  
                   _buildControlsSection(),
-                  
                   const Spacer(),
-                  
                   _buildInstructions(),
                 ],
               ),
             ),
-            
             Expanded(
               child: Stack(
                 children: [
@@ -217,7 +208,7 @@ class _TetrisHomePageState extends State<TetrisHomePage> {
             ),
           ],
         ),
-        
+
         // زر كتم الصوت
         Positioned(
           top: 10,
@@ -253,7 +244,6 @@ class _TetrisHomePageState extends State<TetrisHomePage> {
                 ],
               ),
             ),
-            
             Expanded(
               flex: 7,
               child: Stack(
@@ -270,7 +260,6 @@ class _TetrisHomePageState extends State<TetrisHomePage> {
                 ],
               ),
             ),
-            
             Container(
               height: 120,
               padding: const EdgeInsets.all(10),
@@ -281,9 +270,7 @@ class _TetrisHomePageState extends State<TetrisHomePage> {
                     flex: 2,
                     child: _buildNextPieceSection(),
                   ),
-                  
                   const SizedBox(width: 10),
-                  
                   Expanded(
                     flex: 3,
                     child: _buildControlsSection(),
@@ -293,7 +280,7 @@ class _TetrisHomePageState extends State<TetrisHomePage> {
             ),
           ],
         ),
-        
+
         // زر كتم الصوت
         Positioned(
           top: 10,
@@ -312,99 +299,91 @@ class _TetrisHomePageState extends State<TetrisHomePage> {
   }
 
   Widget _buildMobileLayout() {
-    return Stack(
+    return Column(
       children: [
-        Positioned.fill(
-          child: GameWidget(
-            game: _game,
-            loadingBuilder: (context) => Center(
-              child: CircularProgressIndicator(
-                color: Theme.of(context).primaryColor,
-              ),
-            ),
-          ),
-        ),
-        
-        if (_isPaused) _buildPauseOverlay(),
-        
-        // زر كتم الصوت
-        Positioned(
-          top: 10,
-          left: 10,
-          child: IconButton(
-            icon: Icon(
-              _isMuted ? Icons.volume_off : Icons.volume_up,
-              color: Colors.white,
-              size: 30,
-            ),
-            onPressed: _toggleMute,
-          ),
-        ),
-        
-        // الإحصائيات
-        Positioned(
-          top: 10,
-          right: 50,
-          child: Row(
-            children: [
-              _buildStatCard('SCORE', '${_game.score}'),
-              const SizedBox(width: 5),
-              _buildStatCard('LEVEL', '${_game.level}'),
-              const SizedBox(width: 5),
-              _buildStatCard('LINES', '${_game.linesCleared}'),
-            ],
-          ),
-        ),
-        
-        // القطعة التالية
-        Positioned(
-          top: 80,
-          right: 10,
-          child: Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.5),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
+        // 1. شريط علوي للإحصائيات وكتم الصوت
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          color: const Color(0xFF1D1E33),
+          child: SafeArea(
+            bottom: false,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  'NEXT',
-                  style: TextStyle(color: Colors.white70, fontSize: 12),
+                IconButton(
+                  icon: Icon(_isMuted ? Icons.volume_off : Icons.volume_up,
+                      color: Colors.white70),
+                  onPressed: _toggleMute,
                 ),
-                const SizedBox(height: 5),
-                SizedBox(
-                  width: 80,
-                  height: 80,
-                  child: NextPieceDisplay(nextPiece: _game.nextPiece),
+                _buildStatCard('SCORE', '${_game.score}'),
+                _buildStatCard('LEVEL', '${_game.level}'),
+                IconButton(
+                  icon: Icon(_isPaused ? Icons.play_arrow : Icons.pause,
+                      color: Colors.blue),
+                  onPressed: _togglePause,
                 ),
               ],
             ),
           ),
         ),
-        
-        // أزرار التحكم
-        Positioned(
-          bottom: 20,
-          left: 0,
-          right: 0,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+
+        // 2. منطقة اللعبة (محمية في المنتصف)
+        Expanded(
+          child: Stack(
             children: [
-              _buildControlButton(
-                icon: Icons.refresh,
-                label: 'RESTART',
-                onPressed: _restartGame,
-                color: Colors.orange,
+              GameWidget(
+                game: _game,
+                loadingBuilder: (context) =>
+                    const Center(child: CircularProgressIndicator()),
               ),
-              const SizedBox(width: 30),
-              _buildControlButton(
-                icon: _isPaused ? Icons.play_arrow : Icons.pause,
-                label: _isPaused ? 'RESUME' : 'PAUSE',
-                onPressed: _togglePause,
-                color: _isPaused ? Colors.green : Colors.blue,
+              if (_isPaused) _buildPauseOverlay(),
+              // القطعة التالية في ركن الشاشة
+              Positioned(
+                top: 10,
+                right: 10,
+                child: Container(
+                  padding: const EdgeInsets.all(5),
+                  decoration: BoxDecoration(
+                      color: Colors.black54,
+                      borderRadius: BorderRadius.circular(8)),
+                  child: SizedBox(
+                      width: 40,
+                      height: 40,
+                      child: NextPieceDisplay(nextPiece: _game.nextPiece)),
+                ),
               ),
+            ],
+          ),
+        ),
+
+        // 3. لوحة التحكم (الدراع) - أسفل الشاشة بعيد عن منطقة اللعب
+        Container(
+          height: 220,
+          padding: const EdgeInsets.only(bottom: 20, top: 10),
+          decoration: const BoxDecoration(
+            color: Color(0xFF1D1E33),
+            borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(25), topRight: Radius.circular(25)),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              // أزرار الحركة والتدوير
+              _buildCircleControl(Icons.arrow_back, () => _game.moveLeft(),
+                  Colors.grey[800]!, "Left"),
+              Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  _buildCircleControl(Icons.arrow_upward,
+                      () => _game.rotate(), Colors.blue, "Rotate"),
+                  const SizedBox(height: 15),
+                  _buildCircleControl(Icons.keyboard_double_arrow_down,
+                      () => _game.hardDrop(), Colors.redAccent, "DROP",
+                      size: 65),
+                ],
+              ),
+              _buildCircleControl(Icons.arrow_forward, () => _game.moveRight(),
+                  Colors.grey[800]!, "Right"),
             ],
           ),
         ),
@@ -682,7 +661,8 @@ class _TetrisHomePageState extends State<TetrisHomePage> {
               icon: const Icon(Icons.play_arrow),
               label: const Text('RESUME'),
               style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
               ),
             ),
           ],
@@ -690,4 +670,24 @@ class _TetrisHomePageState extends State<TetrisHomePage> {
       ),
     );
   }
+  Widget _buildCircleControl(IconData icon, VoidCallback onTap, Color color, String label, {double size = 55}) {
+  return Column(
+    children: [
+      GestureDetector(
+        onTapDown: (_) => onTap(),
+        child: Container(
+          width: size,
+          height: size,
+          decoration: BoxDecoration(
+            color: color, 
+            shape: BoxShape.circle, 
+            boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 5)]
+          ),
+          child: Icon(icon, color: Colors.white, size: size * 0.6),
+        ),
+      ),
+      if (label.isNotEmpty) Text(label, style: const TextStyle(fontSize: 10, color: Colors.white54)),
+    ],
+  );
+}
 }

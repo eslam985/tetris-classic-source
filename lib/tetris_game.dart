@@ -6,14 +6,15 @@ import 'package:flame/components.dart';
 import 'package:flame/events.dart';
 import 'package:flutter/services.dart';
 import 'tetromino.dart';
-import 'audio_manager.dart';  // أضف هذا الاستيراد
+import 'audio_manager.dart'; // أضف هذا الاستيراد
 
-class TetrisGame extends FlameGame with KeyboardEvents, TapCallbacks, HasCollisionDetection {
+class TetrisGame extends FlameGame
+    with KeyboardEvents, TapCallbacks, HasCollisionDetection {
   static const int gridWidth = 10;
   static const int gridHeight = 20;
   double cellSize = 32.0;
   double boardPadding = 10.0;
-  
+
   late Vector2 boardSize;
   late double boardStartX;
   late double boardStartY;
@@ -28,20 +29,20 @@ class TetrisGame extends FlameGame with KeyboardEvents, TapCallbacks, HasCollisi
   double timeSinceLastFall = 0;
   bool isGameOver = false;
   bool isPaused = false;
-  
+
   List<int> linesToClear = [];
   double clearAnimationTime = 0;
   bool isAnimating = false;
-  
+
   final Paint gridPaint = Paint()
     ..color = Colors.white24
     ..style = PaintingStyle.stroke
     ..strokeWidth = 1.0;
-  
+
   final Paint backgroundPaint = Paint()
     ..color = const Color(0xFF121212)
     ..style = PaintingStyle.fill;
-  
+
   final Paint borderPaint = Paint()
     ..color = const Color(0xFF00BCD4)
     ..style = PaintingStyle.stroke
@@ -53,22 +54,22 @@ class TetrisGame extends FlameGame with KeyboardEvents, TapCallbacks, HasCollisi
   @override
   Future<void> onLoad() async {
     await super.onLoad();
-    await AudioManager.loadSounds();  // تحميل الأصوات
+    await AudioManager.loadSounds(); // تحميل الأصوات
     initializeGrid();
     generateNewPiece();
     _calculateBoardSize();
-    AudioManager.playBackgroundMusic();  // تشغيل موسيقى الخلفية
+    AudioManager.playBackgroundMusic(); // تشغيل موسيقى الخلفية
   }
 
   void _calculateBoardSize() {
     final availableWidth = size.x - (boardPadding * 2);
     final availableHeight = size.y - (boardPadding * 2);
-    
+
     final cellSizeBasedOnWidth = availableWidth / gridWidth;
     final cellSizeBasedOnHeight = availableHeight / gridHeight;
-    
+
     cellSize = min(cellSizeBasedOnWidth, cellSizeBasedOnHeight) * 0.98;
-    
+
     boardSize = Vector2(gridWidth * cellSize, gridHeight * cellSize);
     boardStartX = (size.x - boardSize.x) / 2;
     boardStartY = (size.y - boardSize.y) / 2;
@@ -108,11 +109,11 @@ class TetrisGame extends FlameGame with KeyboardEvents, TapCallbacks, HasCollisi
   @override
   void render(Canvas canvas) {
     super.render(canvas);
-    
+
     if (boardSize.x == 0) {
       _calculateBoardSize();
     }
-    
+
     canvas.drawRect(
       Rect.fromLTWH(boardStartX, boardStartY, boardSize.x, boardSize.y),
       backgroundPaint,
@@ -126,7 +127,7 @@ class TetrisGame extends FlameGame with KeyboardEvents, TapCallbacks, HasCollisi
         gridPaint,
       );
     }
-    
+
     for (int i = 0; i <= gridHeight; i++) {
       final y = boardStartY + i * cellSize;
       canvas.drawLine(
@@ -189,15 +190,15 @@ class TetrisGame extends FlameGame with KeyboardEvents, TapCallbacks, HasCollisi
   void _drawCell(Canvas canvas, int x, int y, int type) {
     final cellX = boardStartX + x * cellSize;
     final cellY = boardStartY + y * cellSize;
-    
+
     final color = Tetromino.getColor(type);
     final cellPaint = Paint()..color = color;
-    
+
     canvas.drawRect(
       Rect.fromLTWH(cellX + 0.5, cellY + 0.5, cellSize - 1, cellSize - 1),
       cellPaint,
     );
-    
+
     final borderPaint = Paint()
       ..color = Colors.black
       ..style = PaintingStyle.stroke
@@ -206,7 +207,7 @@ class TetrisGame extends FlameGame with KeyboardEvents, TapCallbacks, HasCollisi
       Rect.fromLTWH(cellX + 0.5, cellY + 0.5, cellSize - 1, cellSize - 1),
       borderPaint,
     );
-    
+
     final highlightPaint = Paint()
       ..color = Colors.white.withOpacity(0.2)
       ..style = PaintingStyle.fill;
@@ -225,7 +226,7 @@ class TetrisGame extends FlameGame with KeyboardEvents, TapCallbacks, HasCollisi
     final animationPaint = Paint()
       ..color = Colors.white.withOpacity(0.7 * (1 - animationProgress))
       ..style = PaintingStyle.fill;
-    
+
     for (final line in linesToClear) {
       final y = boardStartY + line * cellSize;
       canvas.drawRect(
@@ -240,7 +241,8 @@ class TetrisGame extends FlameGame with KeyboardEvents, TapCallbacks, HasCollisi
     }
   }
 
-  void _drawCenteredText(Canvas canvas, String text, double fontSize, Color color, double x, double y) {
+  void _drawCenteredText(Canvas canvas, String text, double fontSize,
+      Color color, double x, double y) {
     final textStyle = TextStyle(
       color: color,
       fontSize: fontSize,
@@ -253,14 +255,14 @@ class TetrisGame extends FlameGame with KeyboardEvents, TapCallbacks, HasCollisi
         ),
       ],
     );
-    
+
     final textSpan = TextSpan(text: text, style: textStyle);
     final textPainter = TextPainter(
       text: textSpan,
       textAlign: TextAlign.center,
       textDirection: TextDirection.ltr,
     );
-    
+
     textPainter.layout();
     textPainter.paint(
       canvas,
@@ -285,7 +287,7 @@ class TetrisGame extends FlameGame with KeyboardEvents, TapCallbacks, HasCollisi
 
     if (currentPiece != null && !isValidPosition(currentPiece!)) {
       isGameOver = true;
-      AudioManager.playGameOver();  // صوت نهاية اللعبة
+      AudioManager.playGameOver(); // صوت نهاية اللعبة
     }
   }
 
@@ -314,31 +316,31 @@ class TetrisGame extends FlameGame with KeyboardEvents, TapCallbacks, HasCollisi
 
   void lockPiece() {
     if (currentPiece == null) return;
-    
-    AudioManager.playDrop();  // صوت تثبيت القطعة
-    
+
+    AudioManager.playDrop(); // صوت تثبيت القطعة
+
     for (final block in currentPiece!.blocks) {
       final gx = currentPiece!.x + block.dx;
       final gy = currentPiece!.y + block.dy;
-      
+
       if (gy >= 0 && gy < gridHeight && gx >= 0 && gx < gridWidth) {
         grid[gy][gx] = currentPiece!.type;
       }
     }
-    
+
     checkLines();
     generateNewPiece();
   }
 
   void checkLines() {
     linesToClear.clear();
-    
+
     for (int y = gridHeight - 1; y >= 0; y--) {
       if (grid[y].every((cell) => cell != 0)) {
         linesToClear.add(y);
       }
     }
-    
+
     if (linesToClear.isNotEmpty) {
       isAnimating = true;
       clearAnimationTime = 0;
@@ -347,23 +349,23 @@ class TetrisGame extends FlameGame with KeyboardEvents, TapCallbacks, HasCollisi
 
   void _performLineClear() {
     linesCleared += linesToClear.length;
-    
+
     linesToClear.sort();
-    
+
     for (final line in linesToClear.reversed) {
       grid.removeAt(line);
       grid.insert(0, List.generate(gridWidth, (_) => 0));
     }
-    
+
     if (linesToClear.isNotEmpty) {
-      AudioManager.playLineClear();  // صوت مسح الخط
+      AudioManager.playLineClear(); // صوت مسح الخط
     }
-    
+
     score += _calculateScore(linesToClear.length);
-    
+
     level = 1 + (linesCleared ~/ 10);
     fallSpeed = max(0.1, 0.8 - (level - 1) * 0.05);
-    
+
     linesToClear.clear();
   }
 
@@ -382,17 +384,17 @@ class TetrisGame extends FlameGame with KeyboardEvents, TapCallbacks, HasCollisi
     isPaused = false;
     isAnimating = false;
     generateNewPiece();
-    AudioManager.playBackgroundMusic();  // إعادة تشغيل الموسيقى
+    AudioManager.playBackgroundMusic(); // إعادة تشغيل الموسيقى
   }
 
   void pauseGame() {
     isPaused = true;
-    AudioManager.stopBackgroundMusic();  // إيقاف الموسيقى عند الإيقاف
+    AudioManager.stopBackgroundMusic(); // إيقاف الموسيقى عند الإيقاف
   }
 
   void resumeGame() {
     isPaused = false;
-    AudioManager.playBackgroundMusic();  // استئناف الموسيقى
+    AudioManager.playBackgroundMusic(); // استئناف الموسيقى
   }
 
   void moveLeft() {
@@ -400,7 +402,7 @@ class TetrisGame extends FlameGame with KeyboardEvents, TapCallbacks, HasCollisi
     final newPiece = currentPiece!.copyWith(x: currentPiece!.x - 1);
     if (isValidPosition(newPiece)) {
       currentPiece = newPiece;
-      AudioManager.playMove();  // صوت الحركة
+      AudioManager.playMove(); // صوت الحركة
     }
   }
 
@@ -409,26 +411,26 @@ class TetrisGame extends FlameGame with KeyboardEvents, TapCallbacks, HasCollisi
     final newPiece = currentPiece!.copyWith(x: currentPiece!.x + 1);
     if (isValidPosition(newPiece)) {
       currentPiece = newPiece;
-      AudioManager.playMove();  // صوت الحركة
+      AudioManager.playMove(); // صوت الحركة
     }
   }
 
   void rotate() {
     if (isGameOver || isPaused || currentPiece == null) return;
-    
+
     final newPiece = currentPiece!.copyWith(
       rotation: (currentPiece!.rotation + 1) % 4,
     );
-    
+
     for (final kick in newPiece.getWallKicks()) {
       final kickedPiece = newPiece.copyWith(
         x: newPiece.x + kick.x,
         y: newPiece.y + kick.y,
       );
-      
+
       if (isValidPosition(kickedPiece)) {
         currentPiece = kickedPiece;
-        AudioManager.playRotate();  // صوت الدوران
+        AudioManager.playRotate(); // صوت الدوران
         return;
       }
     }
@@ -436,7 +438,7 @@ class TetrisGame extends FlameGame with KeyboardEvents, TapCallbacks, HasCollisi
 
   void hardDrop() {
     if (isGameOver || isPaused || currentPiece == null) return;
-    
+
     while (true) {
       final newPiece = currentPiece!.copyWith(y: currentPiece!.y + 1);
       if (isValidPosition(newPiece)) {
@@ -488,7 +490,7 @@ class TetrisGame extends FlameGame with KeyboardEvents, TapCallbacks, HasCollisi
         return KeyEventResult.handled;
       }
     }
-    
+
     return KeyEventResult.ignored;
   }
 
@@ -498,14 +500,14 @@ class TetrisGame extends FlameGame with KeyboardEvents, TapCallbacks, HasCollisi
       startGame();
       return;
     }
-    
+
     if (isPaused || isAnimating) return;
-    
+
     final tapX = event.localPosition.x;
     final boardEndX = boardStartX + boardSize.x;
-    
+
     if (tapX < boardStartX || tapX > boardEndX) return;
-    
+
     final relativeX = tapX - boardStartX;
     if (relativeX < boardSize.x / 3) {
       moveLeft();

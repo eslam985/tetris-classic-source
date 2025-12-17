@@ -4,6 +4,7 @@ class AudioManager {
   static bool isMuted = false;
   static double volume = 0.7;
 
+  // توحيد الامتداد لـ mp3 (تأكد أن ملفاتك فعلاً mp3)
   static Future<void> loadSounds() async {
     await FlameAudio.audioCache.loadAll([
       'move.mp3',
@@ -16,27 +17,28 @@ class AudioManager {
   }
 
   static void playMove() {
-    if (!isMuted) FlameAudio.play('move.wav', volume: volume);
+    if (!isMuted) FlameAudio.play('move.mp3', volume: volume);
   }
 
   static void playRotate() {
-    if (!isMuted) FlameAudio.play('rotate.wav', volume: volume);
+    if (!isMuted) FlameAudio.play('rotate.mp3', volume: volume);
   }
 
   static void playDrop() {
-    if (!isMuted) FlameAudio.play('drop.wav', volume: volume * 0.8);
+    if (!isMuted) FlameAudio.play('drop.mp3', volume: volume * 0.8);
   }
 
   static void playLineClear() {
-    if (!isMuted) FlameAudio.play('line_clear.wav', volume: volume);
+    if (!isMuted) FlameAudio.play('line_clear.mp3', volume: volume);
   }
 
   static void playGameOver() {
-    if (!isMuted) FlameAudio.play('game_over.wav', volume: volume);
+    if (!isMuted) FlameAudio.play('game_over.mp3', volume: volume);
   }
 
   static void playBackgroundMusic() {
     if (!isMuted) {
+      // الـ BGM في فليم بيشتغل من مجلد assets/audio/ أيضاً
       FlameAudio.bgm.play('theme.mp3', volume: volume * 0.5);
     }
   }
