@@ -1,0 +1,39 @@
+name: Build and Release
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch: # ده بيخليك تشغل البناء يدوياً لو حبيت
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Build Web
+        run: flutter build web --release
+
+      - name: Build Android APK
+        run: flutter build apk --debug
+
+      - name: Build Windows EXE
+        run: flutter build windows --release
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: game-builds
+          path: |
+            build/app/outputs/flutter-apk/app-debug.apk
+            build/windows/runner/Release/*.exe
+            build/web/
