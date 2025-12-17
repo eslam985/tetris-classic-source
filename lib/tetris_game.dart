@@ -10,6 +10,7 @@ import 'audio_manager.dart'; // أضف هذا الاستيراد
 
 class TetrisGame extends FlameGame
     with KeyboardEvents, TapCallbacks, HasCollisionDetection {
+  VoidCallback? onGameStateChanged;
   static const int gridWidth = 10;
   static const int gridHeight = 20;
   double cellSize = 32.0;
@@ -86,6 +87,8 @@ class TetrisGame extends FlameGame
   @override
   void update(double dt) {
     super.update(dt);
+    // ضيف السطر ده عشان السكور يفضل يتحدث لحظياً
+    onGameStateChanged?.call();
 
     if (isGameOver || isPaused || currentPiece == null) return;
 
@@ -241,8 +244,14 @@ class TetrisGame extends FlameGame
     }
   }
 
-  void _drawCenteredText(Canvas canvas, String text, double fontSize,
-      Color color, double x, double y) {
+  void _drawCenteredText(
+    Canvas canvas,
+    String text,
+    double fontSize,
+    Color color,
+    double x,
+    double y,
+  ) {
     final textStyle = TextStyle(
       color: color,
       fontSize: fontSize,
@@ -271,23 +280,22 @@ class TetrisGame extends FlameGame
   }
 
   void initializeGrid() {
-    grid = List.generate(
-      gridHeight,
-      (_) => List.generate(gridWidth, (_) => 0),
-    );
+    grid = List.generate(gridHeight, (_) => List.generate(gridWidth, (_) => 0));
   }
 
   void generateNewPiece() {
+    // 1. لو أول مرة نلعب، املأ قطعة الانتظار
     nextPiece ??= Tetromino.getRandom();
-    currentPiece = nextPiece?.copyWith(
-      x: gridWidth ~/ 2 - 1,
-      y: 0,
-    );
+
+    // 2. القطعة الحالية تاخد "نسخة طبق الأصل" من اللي في الانتظار
+    currentPiece = nextPiece!.copyWith(x: gridWidth ~/ 2 - 1, y: 0);
+
+    // 3. دلوقتي بس، ولّد قطعة جديدة لخانة الانتظار (Next Piece)
     nextPiece = Tetromino.getRandom();
 
     if (currentPiece != null && !isValidPosition(currentPiece!)) {
       isGameOver = true;
-      AudioManager.playGameOver(); // صوت نهاية اللعبة
+      AudioManager.playGameOver();
     }
   }
 
@@ -348,7 +356,7 @@ class TetrisGame extends FlameGame
   }
 
   void _performLineClear() {
-    int numLines = linesToClear.length; // عدد السطور اللي اتمسحت
+    int numLines = linesToClear.length;
     linesCleared += numLines;
 
     linesToClear.sort();
@@ -360,15 +368,13 @@ class TetrisGame extends FlameGame
 
     if (numLines > 0) {
       AudioManager.playLineClear();
-      // حساب السكور بناءً على عدد السطور (كل ما تمسح أكتر تاخد بونص)
       score += _calculateScore(numLines);
-
-      // تحديث الليفل: كل 5 سطور اتمسحت بنزيد ليفل (عشان تحس بالفرق أسرع)
       level = 1 + (linesCleared ~/ 5);
-
-      // زيادة السرعة: بنقلل الوقت بين كل وقعة والتانية
-      // بتبدأ من 0.8 ثانية وبتقل 0.1 ثانية كل ليفل لحد ما توصل لـ 0.1 ثانية
       fallSpeed = max(0.1, 0.8 - (level - 1) * 0.1);
+
+      // السطر اللي ناقصك هنا:
+      // لازم تنادي على الـ Callback اللي بيربط السكور بالـ UI
+      // لو كنت مسميه مثلاً notifyUpdate() أو استدعي setState بره
     }
 
     linesToClear.clear();

@@ -41,6 +41,10 @@ class _TetrisHomePageState extends State<TetrisHomePage> {
   void initState() {
     super.initState();
     _game = TetrisGame();
+    // السطر السحري اللي هيحدث السكور والـ Next Piece فوراً
+    _game.onGameStateChanged = () {
+      if (mounted) setState(() {});
+    };
   }
 
   void _startGame() {
@@ -63,6 +67,10 @@ class _TetrisHomePageState extends State<TetrisHomePage> {
   void _restartGame() {
     setState(() {
       _game = TetrisGame();
+      // لازم نعيد الربط لما نكريت نسخة جديدة من اللعبة
+      _game.onGameStateChanged = () {
+        if (mounted) setState(() {});
+      };
       _isGameRunning = true;
       _isPaused = false;
       _game.startGame();
@@ -173,10 +181,7 @@ class _TetrisHomePageState extends State<TetrisHomePage> {
                       ),
                       const Text(
                         'CLASSIC',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.white70,
-                        ),
+                        style: TextStyle(fontSize: 14, color: Colors.white70),
                       ),
                     ],
                   ),
@@ -266,15 +271,9 @@ class _TetrisHomePageState extends State<TetrisHomePage> {
               color: const Color(0xFF1D1E33),
               child: Row(
                 children: [
-                  Expanded(
-                    flex: 2,
-                    child: _buildNextPieceSection(),
-                  ),
+                  Expanded(flex: 2, child: _buildNextPieceSection()),
                   const SizedBox(width: 10),
-                  Expanded(
-                    flex: 3,
-                    child: _buildControlsSection(),
-                  ),
+                  Expanded(flex: 3, child: _buildControlsSection()),
                 ],
               ),
             ),
@@ -314,8 +313,10 @@ class _TetrisHomePageState extends State<TetrisHomePage> {
                 _buildStatCard('LEVEL', '${_game.level}'),
                 // زر Pause صغير في الركن
                 IconButton(
-                  icon: Icon(_isPaused ? Icons.play_arrow : Icons.pause,
-                      color: Colors.blue),
+                  icon: Icon(
+                    _isPaused ? Icons.play_arrow : Icons.pause,
+                    color: Colors.blue,
+                  ),
                   onPressed: _togglePause,
                 ),
               ],
@@ -343,15 +344,21 @@ class _TetrisHomePageState extends State<TetrisHomePage> {
           decoration: const BoxDecoration(
             color: Color(0xFF1D1E33),
             borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(30), topRight: Radius.circular(30)),
+              topLeft: Radius.circular(30),
+              topRight: Radius.circular(30),
+            ),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               // زر الروتيت (لوحده فوق في النص)
-              _buildCircleControl(Icons.rotate_right, () => _game.rotate(),
-                  Colors.orangeAccent, "Rotate",
-                  size: 60),
+              _buildCircleControl(
+                Icons.rotate_right,
+                () => _game.rotate(),
+                Colors.orangeAccent,
+                "Rotate",
+                size: 60,
+              ),
 
               const SizedBox(height: 5), // مسافة بسيطة جداً
 
@@ -359,19 +366,31 @@ class _TetrisHomePageState extends State<TetrisHomePage> {
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
                   // زر الشمال
-                  _buildCircleControl(Icons.arrow_back, () => _game.moveLeft(),
-                      Colors.blueAccent, "Left",
-                      size: 60),
+                  _buildCircleControl(
+                    Icons.arrow_back,
+                    () => _game.moveLeft(),
+                    Colors.blueAccent,
+                    "Left",
+                    size: 60,
+                  ),
 
                   // زر الدروب (في النص تحت الروتيت)
-                  _buildCircleControl(Icons.keyboard_double_arrow_down,
-                      () => _game.hardDrop(), Colors.redAccent, "DROP",
-                      size: 65),
+                  _buildCircleControl(
+                    Icons.keyboard_double_arrow_down,
+                    () => _game.hardDrop(),
+                    Colors.redAccent,
+                    "DROP",
+                    size: 65,
+                  ),
 
                   // زر اليمين
-                  _buildCircleControl(Icons.arrow_forward,
-                      () => _game.moveRight(), Colors.blueAccent, "Right",
-                      size: 60),
+                  _buildCircleControl(
+                    Icons.arrow_forward,
+                    () => _game.moveRight(),
+                    Colors.blueAccent,
+                    "Right",
+                    size: 60,
+                  ),
                 ],
               ),
             ],
@@ -416,10 +435,7 @@ class _TetrisHomePageState extends State<TetrisHomePage> {
       children: [
         Text(
           title,
-          style: const TextStyle(
-            fontSize: 16,
-            color: Colors.white70,
-          ),
+          style: const TextStyle(fontSize: 16, color: Colors.white70),
         ),
         Text(
           value,
@@ -444,10 +460,7 @@ class _TetrisHomePageState extends State<TetrisHomePage> {
         children: [
           Text(
             title,
-            style: const TextStyle(
-              fontSize: 10,
-              color: Colors.white70,
-            ),
+            style: const TextStyle(fontSize: 10, color: Colors.white70),
           ),
           const SizedBox(height: 2),
           Text(
@@ -544,20 +557,14 @@ class _TetrisHomePageState extends State<TetrisHomePage> {
         Container(
           width: 50,
           height: 50,
-          decoration: BoxDecoration(
-            color: color,
-            shape: BoxShape.circle,
-          ),
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
           child: IconButton(
             icon: Icon(icon, color: Colors.white, size: 24),
             onPressed: onPressed,
           ),
         ),
         const SizedBox(height: 4),
-        Text(
-          label,
-          style: const TextStyle(color: Colors.white, fontSize: 10),
-        ),
+        Text(label, style: const TextStyle(color: Colors.white, fontSize: 10)),
       ],
     );
   }
@@ -614,10 +621,7 @@ class _TetrisHomePageState extends State<TetrisHomePage> {
           const SizedBox(width: 8),
           Text(
             action,
-            style: const TextStyle(
-              color: Colors.white70,
-              fontSize: 12,
-            ),
+            style: const TextStyle(color: Colors.white70, fontSize: 12),
           ),
         ],
       ),
@@ -651,8 +655,10 @@ class _TetrisHomePageState extends State<TetrisHomePage> {
               icon: const Icon(Icons.play_arrow),
               label: const Text('RESUME'),
               style: ElevatedButton.styleFrom(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 10,
+                ),
               ),
             ),
           ],
@@ -662,8 +668,12 @@ class _TetrisHomePageState extends State<TetrisHomePage> {
   }
 
   Widget _buildCircleControl(
-      IconData icon, VoidCallback onTap, Color color, String label,
-      {double size = 60}) {
+    IconData icon,
+    VoidCallback onTap,
+    Color color,
+    String label, {
+    double size = 60,
+  }) {
     return Column(
       children: [
         GestureDetector(
@@ -677,9 +687,10 @@ class _TetrisHomePageState extends State<TetrisHomePage> {
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                    color: color.withOpacity(0.4),
-                    blurRadius: 8,
-                    spreadRadius: 1)
+                  color: color.withOpacity(0.4),
+                  blurRadius: 8,
+                  spreadRadius: 1,
+                ),
               ],
             ),
             child: Icon(icon, color: Colors.white, size: size * 0.5),

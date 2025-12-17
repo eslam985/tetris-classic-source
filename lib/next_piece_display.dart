@@ -30,15 +30,15 @@ class NextPieceDisplay extends StatelessWidget {
 
 class _NextPiecePainter extends CustomPainter {
   final Tetromino nextPiece;
-  
+
   _NextPiecePainter(this.nextPiece);
 
   @override
   void paint(Canvas canvas, Size size) {
     final blocks = nextPiece.blocks;
-    
     if (blocks.isEmpty) return;
-    
+
+    // حساب حدود القطعة
     int minX = 4, maxX = 0, minY = 4, maxY = 0;
     for (final block in blocks) {
       minX = block.dx < minX ? block.dx : minX;
@@ -46,28 +46,29 @@ class _NextPiecePainter extends CustomPainter {
       minY = block.dy < minY ? block.dy : minY;
       maxY = block.dy > maxY ? block.dy : maxY;
     }
-    
+
     final pieceWidth = maxX - minX + 1;
     final pieceHeight = maxY - minY + 1;
-    
-    final maxDimension = max(pieceWidth, pieceHeight);
-    final cellSize = min(size.width, size.height) / (maxDimension + 1);
-    
+
+    // تكبير الـ cellSize شوية عشان القطعة تملأ المربع الصغير بشكل أشيك
+    final cellSize =
+        min(size.width / (pieceWidth + 1), size.height / (pieceHeight + 1));
+
     final offsetX = (size.width - pieceWidth * cellSize) / 2;
     final offsetY = (size.height - pieceHeight * cellSize) / 2;
-    
+
     final color = Tetromino.getColor(nextPiece.type);
-    
+
     for (final block in blocks) {
       final x = offsetX + (block.dx - minX) * cellSize;
       final y = offsetY + (block.dy - minY) * cellSize;
-      
+
       final paint = Paint()..color = color;
       canvas.drawRect(
         Rect.fromLTWH(x + 1, y + 1, cellSize - 2, cellSize - 2),
         paint,
       );
-      
+
       final borderPaint = Paint()
         ..color = Colors.black
         ..style = PaintingStyle.stroke
@@ -76,10 +77,12 @@ class _NextPiecePainter extends CustomPainter {
         Rect.fromLTWH(x + 1, y + 1, cellSize - 2, cellSize - 2),
         borderPaint,
       );
-      
+
+      // التعديل هنا عشان نشيل الـ Warning
       final highlightPaint = Paint()
-        ..color = Colors.white.withOpacity(0.3)
+        ..color = Colors.white.withValues(alpha: 0.3) // تم التعديل هنا
         ..style = PaintingStyle.fill;
+
       canvas.drawRect(
         Rect.fromLTWH(x + 2, y + 2, cellSize - 6, 2),
         highlightPaint,
@@ -93,4 +96,4 @@ class _NextPiecePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
-} 
+}
