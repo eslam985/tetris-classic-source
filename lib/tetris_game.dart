@@ -348,7 +348,8 @@ class TetrisGame extends FlameGame
   }
 
   void _performLineClear() {
-    linesCleared += linesToClear.length;
+    int numLines = linesToClear.length; // عدد السطور اللي اتمسحت
+    linesCleared += numLines;
 
     linesToClear.sort();
 
@@ -357,14 +358,18 @@ class TetrisGame extends FlameGame
       grid.insert(0, List.generate(gridWidth, (_) => 0));
     }
 
-    if (linesToClear.isNotEmpty) {
-      AudioManager.playLineClear(); // صوت مسح الخط
+    if (numLines > 0) {
+      AudioManager.playLineClear();
+      // حساب السكور بناءً على عدد السطور (كل ما تمسح أكتر تاخد بونص)
+      score += _calculateScore(numLines);
+
+      // تحديث الليفل: كل 5 سطور اتمسحت بنزيد ليفل (عشان تحس بالفرق أسرع)
+      level = 1 + (linesCleared ~/ 5);
+
+      // زيادة السرعة: بنقلل الوقت بين كل وقعة والتانية
+      // بتبدأ من 0.8 ثانية وبتقل 0.1 ثانية كل ليفل لحد ما توصل لـ 0.1 ثانية
+      fallSpeed = max(0.1, 0.8 - (level - 1) * 0.1);
     }
-
-    score += _calculateScore(linesToClear.length);
-
-    level = 1 + (linesCleared ~/ 10);
-    fallSpeed = max(0.1, 0.8 - (level - 1) * 0.05);
 
     linesToClear.clear();
   }

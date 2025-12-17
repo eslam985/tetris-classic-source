@@ -301,22 +301,18 @@ class _TetrisHomePageState extends State<TetrisHomePage> {
   Widget _buildMobileLayout() {
     return Column(
       children: [
-        // 1. شريط علوي للإحصائيات وكتم الصوت
+        // 1. شريط الإحصائيات (السكور والليفل)
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
           color: const Color(0xFF1D1E33),
           child: SafeArea(
             bottom: false,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                IconButton(
-                  icon: Icon(_isMuted ? Icons.volume_off : Icons.volume_up,
-                      color: Colors.white70),
-                  onPressed: _toggleMute,
-                ),
                 _buildStatCard('SCORE', '${_game.score}'),
                 _buildStatCard('LEVEL', '${_game.level}'),
+                // زر Pause صغير في الركن
                 IconButton(
                   icon: Icon(_isPaused ? Icons.play_arrow : Icons.pause,
                       color: Colors.blue),
@@ -327,7 +323,7 @@ class _TetrisHomePageState extends State<TetrisHomePage> {
           ),
         ),
 
-        // 2. منطقة اللعبة (محمية في المنتصف)
+        // 2. منطقة اللعبة
         Expanded(
           child: Stack(
             children: [
@@ -337,58 +333,47 @@ class _TetrisHomePageState extends State<TetrisHomePage> {
                     const Center(child: CircularProgressIndicator()),
               ),
               if (_isPaused) _buildPauseOverlay(),
-              // القطعة التالية في ركن الشاشة
-              Positioned(
-                top: 10,
-                right: 10,
-                child: Container(
-                  padding: const EdgeInsets.all(5),
-                  decoration: BoxDecoration(
-                      color: Colors.black54,
-                      borderRadius: BorderRadius.circular(8)),
-                  child: SizedBox(
-                      width: 40,
-                      height: 40,
-                      child: NextPieceDisplay(nextPiece: _game.nextPiece)),
-                ),
-              ),
             ],
           ),
         ),
 
-        // 3. لوحة التحكم (الدراع) - أسفل الشاشة بعيد عن منطقة اللعب
+        // 3. لوحة التحكم الاحترافية (الشكل اللي طلبته)
         Container(
-          height: 180, // قللنا الارتفاع شوية عشان نلم الأزرار لتحت
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 20),
+          padding: const EdgeInsets.only(bottom: 20, top: 10),
           decoration: const BoxDecoration(
             color: Color(0xFF1D1E33),
             borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(25), topRight: Radius.circular(25)),
+                topLeft: Radius.circular(30), topRight: Radius.circular(30)),
           ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            crossAxisAlignment:
-                CrossAxisAlignment.center, // يخلي كل الأزرار على خط واحد
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              // زر اليسار - أخضر فاقع وكبير
-              _buildCircleControl(Icons.arrow_back, () => _game.moveLeft(),
-                  Colors.greenAccent[700]!, "Left",
-                  size: 75),
-
-              // زر الروتيت - أزرق فاقع وبنفس الحجم ونزل جنبهم
+              // زر الروتيت (لوحده فوق في النص)
               _buildCircleControl(Icons.rotate_right, () => _game.rotate(),
-                  Colors.cyanAccent[400]!, "Rotate",
-                  size: 75),
+                  Colors.orangeAccent, "Rotate",
+                  size: 60),
 
-              // زر اليمين - أخضر فاقع وكبير
-              _buildCircleControl(Icons.arrow_forward, () => _game.moveRight(),
-                  Colors.greenAccent[700]!, "Right",
-                  size: 75),
+              const SizedBox(height: 5), // مسافة بسيطة جداً
 
-              // زر الدروب - أحمر فاقع وكبير
-              _buildCircleControl(Icons.keyboard_double_arrow_down,
-                  () => _game.hardDrop(), Colors.redAccent[400]!, "DROP",
-                  size: 75),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  // زر الشمال
+                  _buildCircleControl(Icons.arrow_back, () => _game.moveLeft(),
+                      Colors.blueAccent, "Left",
+                      size: 60),
+
+                  // زر الدروب (في النص تحت الروتيت)
+                  _buildCircleControl(Icons.keyboard_double_arrow_down,
+                      () => _game.hardDrop(), Colors.redAccent, "DROP",
+                      size: 65),
+
+                  // زر اليمين
+                  _buildCircleControl(Icons.arrow_forward,
+                      () => _game.moveRight(), Colors.blueAccent, "Right",
+                      size: 60),
+                ],
+              ),
             ],
           ),
         ),
@@ -678,26 +663,30 @@ class _TetrisHomePageState extends State<TetrisHomePage> {
 
   Widget _buildCircleControl(
       IconData icon, VoidCallback onTap, Color color, String label,
-      {double size = 55}) {
+      {double size = 60}) {
     return Column(
       children: [
         GestureDetector(
+          // استخدمنا onTapDown عشان الاستجابة تكون فورية بمجرد اللمس
           onTapDown: (_) => onTap(),
           child: Container(
             width: size,
             height: size,
             decoration: BoxDecoration(
-                color: color,
-                shape: BoxShape.circle,
-                boxShadow: const [
-                  BoxShadow(color: Colors.black26, blurRadius: 5)
-                ]),
-            child: Icon(icon, color: Colors.white, size: size * 0.6),
+              color: color.withOpacity(0.8),
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                    color: color.withOpacity(0.4),
+                    blurRadius: 8,
+                    spreadRadius: 1)
+              ],
+            ),
+            child: Icon(icon, color: Colors.white, size: size * 0.5),
           ),
         ),
-        if (label.isNotEmpty)
-          Text(label,
-              style: const TextStyle(fontSize: 10, color: Colors.white54)),
+        const SizedBox(height: 4),
+        Text(label, style: const TextStyle(fontSize: 9, color: Colors.white54)),
       ],
     );
   }
