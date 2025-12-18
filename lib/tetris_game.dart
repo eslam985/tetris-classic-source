@@ -62,9 +62,9 @@ class TetrisGame extends FlameGame
   }
 
   void _calculateBoardSize() {
-    // هامش عمودي كبير للهرب من التسك بار والساعة
-    const double verticalPadding = 160.0;
-    const double horizontalPadding = 40.0;
+    // هوامش صغيرة جداً عشان ندي مساحة للعبة تكبر
+    const double verticalPadding = 60.0;
+    const double horizontalPadding = 20.0;
 
     final availableWidth = size.x - horizontalPadding;
     final availableHeight = size.y - verticalPadding;
@@ -74,12 +74,10 @@ class TetrisGame extends FlameGame
 
     boardStartX = (size.x - boardSize.x) / 2;
 
-    // هنا اللعبة بتترفع: بنحطها في نص المساحة المتاحة وبنرفعها كمان 60 بكسل لفوق
-    boardStartY = (size.y - boardSize.y) / 2 - 60;
+    // نرفعها 30 بكسل بس عن المركز
+    boardStartY = (size.y - boardSize.y) / 2 - 30;
 
-    // تأمين: لو الارتفاع طلع بالسالب (في الشاشات الصغيرة جداً) خلية يبدأ من 20 بكسل
-    if (boardStartY < 20) boardStartY = 20;
-
+    if (boardStartY < 5) boardStartY = 5;
     gameOffset = Vector2(boardStartX, boardStartY);
   }
 
@@ -126,7 +124,7 @@ class TetrisGame extends FlameGame
     // --- السطر السحري هنا ---
     // ده بيخلي الـ Canvas يبدأ يرسم من الـ Offset اللي حسبناه (اللي فيه الـ 120 بكسل فرق)
     canvas.save();
-    canvas.translate(gameOffset.x, gameOffset.y - 40);
+    canvas.translate(gameOffset.x, gameOffset.y);
     // الآن كل الرسم اللي تحت هيترسم "نسبةً" للنقطة الجديدة
     // ملحوظة: لازم نستبدل boardStartX و boardStartY بـ 0
     // لأن الـ translate هي اللي قامت بالمهمة دي خلاص
