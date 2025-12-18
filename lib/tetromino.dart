@@ -88,7 +88,7 @@ class Tetromino {
   factory Tetromino.getRandom() {
     final random = Random();
     final type = random.nextInt(7) + 1;
-    final initialX = 5 - 2; // العودة إلى المركز للشبكة 10×20
+    const initialX = 5 - 2; // العودة إلى المركز للشبكة 10×20
 
     return Tetromino(
       type: type,

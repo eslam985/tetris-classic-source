@@ -14,14 +14,17 @@ class NextPieceDisplay extends StatelessWidget {
         borderRadius: BorderRadius.circular(10),
       ),
       child: nextPiece == null
-          ? Center(
+          ? const Center(
+              // أضفنا const هنا
               child: Icon(
+                // أضفنا const هنا
                 Icons.question_mark,
                 color: Colors.white24,
                 size: 32,
               ),
             )
           : CustomPaint(
+              // الـ CustomPaint مينفعش يكون const عشان بياخد nextPiece متغير
               painter: _NextPiecePainter(nextPiece!),
             ),
     );

@@ -1,15 +1,14 @@
 import 'dart:math';
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flame/game.dart';
-import 'package:flame/components.dart';
 import 'package:flame/events.dart';
 import 'package:flutter/services.dart';
 import 'tetromino.dart';
-import 'audio_manager.dart'; // أضف هذا الاستيراد
+import 'audio_manager.dart';
 
 class TetrisGame extends FlameGame
     with KeyboardEvents, TapCallbacks, HasCollisionDetection {
+  Vector2 gameOffset = Vector2.zero();
   VoidCallback? onGameStateChanged;
   static const int gridWidth = 10;
   static const int gridHeight = 20;
@@ -63,24 +62,52 @@ class TetrisGame extends FlameGame
   }
 
   void _calculateBoardSize() {
-    final availableWidth = size.x - (boardPadding * 2);
-    final availableHeight = size.y - (boardPadding * 2);
+    // 1. تحديد هامش أمان كبير للارتفاع عشان التاسك بار (Desktop) والساعة (Mobile)
+    // 100 بكسل كافية جداً لتنفس اللعبة
+    const double verticalPadding = 100.0;
+    const double horizontalPadding = 40.0;
 
+    final availableWidth = size.x - horizontalPadding;
+    final availableHeight = size.y - verticalPadding;
+
+    // 2. حساب حجم المربع بناءً على الارتفاع المتاح "الصافي"
     final cellSizeBasedOnWidth = availableWidth / gridWidth;
     final cellSizeBasedOnHeight = availableHeight / gridHeight;
 
-    cellSize = min(cellSizeBasedOnWidth, cellSizeBasedOnHeight) * 0.98;
+    // 3. اختيار الحجم الأصغر لضمان أن اللعبة تظهر بالكامل
+    cellSize = min(cellSizeBasedOnWidth, cellSizeBasedOnHeight);
 
+    // 4. تحديث المتغيرات اللي اللعبة بتستخدمها في الرسم (مهم جداً)
     boardSize = Vector2(gridWidth * cellSize, gridHeight * cellSize);
     boardStartX = (size.x - boardSize.x) / 2;
     boardStartY = (size.y - boardSize.y) / 2;
+
+    // 5. تحديث الـ Offset اللي بيستخدمه المحرك
+    gameOffset = Vector2(boardStartX, boardStartY);
   }
 
   @override
   void onGameResize(Vector2 size) {
     super.onGameResize(size);
+
     if (size.x > 0 && size.y > 0) {
-      _calculateBoardSize();
+      // استخدمنا const هنا عشان نحل مشكلة (prefer_const_declarations)
+      const double verticalPadding = 100.0;
+      const double horizontalPadding = 40.0;
+
+      double availableHeight = size.y - verticalPadding;
+      double availableWidth = size.x - horizontalPadding;
+
+      // حساب حجم المربع بناءً على المساحة الصافية
+      cellSize = min(availableWidth / gridWidth, availableHeight / gridHeight);
+
+      // تحديث الأبعاد اللي بيستخدمها ملف الرسم
+      boardSize = Vector2(gridWidth * cellSize, gridHeight * cellSize);
+      boardStartX = (size.x - boardSize.x) / 2;
+      boardStartY = (size.y - boardSize.y) / 2;
+
+      // السطر ده هو اللي بيرفع اللعبة فوق التاسك بار فعلياً
+      gameOffset = Vector2(boardStartX, boardStartY);
     }
   }
 
@@ -212,7 +239,7 @@ class TetrisGame extends FlameGame
     );
 
     final highlightPaint = Paint()
-      ..color = Colors.white.withOpacity(0.2)
+      ..color = Colors.white.withValues(alpha: 0.2)
       ..style = PaintingStyle.fill;
     canvas.drawRect(
       Rect.fromLTWH(cellX + 2, cellY + 2, cellSize - 6, 2),
@@ -227,7 +254,7 @@ class TetrisGame extends FlameGame
   void _drawLineClearAnimation(Canvas canvas) {
     final animationProgress = min(1.0, clearAnimationTime / 0.5);
     final animationPaint = Paint()
-      ..color = Colors.white.withOpacity(0.7 * (1 - animationProgress))
+      ..color = Colors.white.withValues(alpha: 0.7 * (1 - animationProgress))
       ..style = PaintingStyle.fill;
 
     for (final line in linesToClear) {
@@ -259,7 +286,7 @@ class TetrisGame extends FlameGame
       shadows: [
         Shadow(
           blurRadius: 4,
-          color: Colors.black.withOpacity(0.8),
+          color: Colors.black.withValues(alpha: 0.8),
           offset: const Offset(2, 2),
         ),
       ],
@@ -370,11 +397,10 @@ class TetrisGame extends FlameGame
       AudioManager.playLineClear();
       score += _calculateScore(numLines);
       level = 1 + (linesCleared ~/ 5);
-      fallSpeed = max(0.1, 0.8 - (level - 1) * 0.1);
-
-      // السطر اللي ناقصك هنا:
-      // لازم تنادي على الـ Callback اللي بيربط السكور بالـ UI
-      // لو كنت مسميه مثلاً notifyUpdate() أو استدعي setState بره
+      // السرعة بتبدأ أبطأ (1.0) وبتزيد ببطء شديد جداً (0.05)
+      fallSpeed = max(0.2, 1.0 - (level - 1) * 0.05);
+      // السطر السحري اللي بيحدث الـ UI فوراً
+      onGameStateChanged?.call();
     }
 
     linesToClear.clear();

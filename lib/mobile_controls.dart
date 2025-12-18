@@ -96,11 +96,11 @@ class _ControlButton extends StatelessWidget {
         width: isLarge ? 120 : 70,
         height: isLarge ? 70 : 70,
         decoration: BoxDecoration(
-          color: color.withOpacity(0.8),
+          color: color.withValues(alpha: 0.8),
           borderRadius: BorderRadius.circular(35),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.3),
+              color: Colors.black.withValues(alpha: 0.3),
               blurRadius: 5,
               offset: const Offset(2, 2),
             ),

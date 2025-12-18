@@ -300,7 +300,6 @@ class _TetrisHomePageState extends State<TetrisHomePage> {
   Widget _buildMobileLayout() {
     return Column(
       children: [
-        // 1. شريط الإحصائيات (السكور والليفل)
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
           color: const Color(0xFF1D1E33),
@@ -310,21 +309,22 @@ class _TetrisHomePageState extends State<TetrisHomePage> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 _buildStatCard('SCORE', '${_game.score}'),
-                _buildStatCard('LEVEL', '${_game.level}'),
-                // زر Pause صغير في الركن
-                IconButton(
-                  icon: Icon(
-                    _isPaused ? Icons.play_arrow : Icons.pause,
-                    color: Colors.blue,
-                  ),
-                  onPressed: _togglePause,
+                Column(
+                  children: [
+                    const Text('NEXT',
+                        style: TextStyle(fontSize: 10, color: Colors.white70)),
+                    SizedBox(
+                      width: 50,
+                      height: 50,
+                      child: NextPieceDisplay(nextPiece: _game.nextPiece),
+                    ),
+                  ],
                 ),
+                _buildStatCard('LEVEL', '${_game.level}'),
               ],
             ),
           ),
         ),
-
-        // 2. منطقة اللعبة
         Expanded(
           child: Stack(
             children: [
@@ -337,8 +337,7 @@ class _TetrisHomePageState extends State<TetrisHomePage> {
             ],
           ),
         ),
-
-        // 3. لوحة التحكم الاحترافية (الشكل اللي طلبته)
+        // هذا هو الجزء الذي كان يسبب الخطأ، وضعناه مباشرة هنا
         Container(
           padding: const EdgeInsets.only(bottom: 20, top: 10),
           decoration: const BoxDecoration(
@@ -351,7 +350,6 @@ class _TetrisHomePageState extends State<TetrisHomePage> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // زر الروتيت (لوحده فوق في النص)
               _buildCircleControl(
                 Icons.rotate_right,
                 () => _game.rotate(),
@@ -359,13 +357,10 @@ class _TetrisHomePageState extends State<TetrisHomePage> {
                 "Rotate",
                 size: 60,
               ),
-
-              const SizedBox(height: 5), // مسافة بسيطة جداً
-
+              const SizedBox(height: 5),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  // زر الشمال
                   _buildCircleControl(
                     Icons.arrow_back,
                     () => _game.moveLeft(),
@@ -373,8 +368,6 @@ class _TetrisHomePageState extends State<TetrisHomePage> {
                     "Left",
                     size: 60,
                   ),
-
-                  // زر الدروب (في النص تحت الروتيت)
                   _buildCircleControl(
                     Icons.keyboard_double_arrow_down,
                     () => _game.hardDrop(),
@@ -382,8 +375,6 @@ class _TetrisHomePageState extends State<TetrisHomePage> {
                     "DROP",
                     size: 65,
                   ),
-
-                  // زر اليمين
                   _buildCircleControl(
                     Icons.arrow_forward,
                     () => _game.moveRight(),
@@ -404,7 +395,7 @@ class _TetrisHomePageState extends State<TetrisHomePage> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.3),
+        color: Colors.black.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -453,7 +444,7 @@ class _TetrisHomePageState extends State<TetrisHomePage> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.6),
+        color: Colors.black.withValues(alpha: 0.6),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Column(
@@ -480,7 +471,7 @@ class _TetrisHomePageState extends State<TetrisHomePage> {
     return Container(
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.3),
+        color: Colors.black.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Column(
@@ -509,7 +500,7 @@ class _TetrisHomePageState extends State<TetrisHomePage> {
     return Container(
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.3),
+        color: Colors.black.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Column(
@@ -573,7 +564,7 @@ class _TetrisHomePageState extends State<TetrisHomePage> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.3),
+        color: Colors.black.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Column(
@@ -630,7 +621,7 @@ class _TetrisHomePageState extends State<TetrisHomePage> {
 
   Widget _buildPauseOverlay() {
     return Container(
-      color: Colors.black.withOpacity(0.85),
+      color: Colors.black.withValues(alpha: 0.85),
       child: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -683,11 +674,11 @@ class _TetrisHomePageState extends State<TetrisHomePage> {
             width: size,
             height: size,
             decoration: BoxDecoration(
-              color: color.withOpacity(0.8),
+              color: color.withValues(alpha: 0.8),
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: color.withOpacity(0.4),
+                  color: color.withValues(alpha: 0.4),
                   blurRadius: 8,
                   spreadRadius: 1,
                 ),
