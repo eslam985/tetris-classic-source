@@ -42,9 +42,15 @@ class _TetrisHomePageState extends State<TetrisHomePage> {
   void initState() {
     super.initState();
     _game = TetrisGame();
-    // السطر السحري اللي هيحدث السكور والـ Next Piece فوراً
+
+    // تعديل السطر السحري عشان يمنع التقطيع (Lag) في أول جيم
     _game.onGameStateChanged = () {
-      if (mounted) setState(() {});
+      if (mounted) {
+        // بنستخدم addPostFrameCallback عشان الـ setState تستنى الفريم اللي عليه الدور
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) setState(() {});
+        });
+      }
     };
   }
 
@@ -70,7 +76,12 @@ class _TetrisHomePageState extends State<TetrisHomePage> {
       _game = TetrisGame();
       // لازم نعيد الربط لما نكريت نسخة جديدة من اللعبة
       _game.onGameStateChanged = () {
-        if (mounted) setState(() {});
+        if (mounted) {
+          // السطر ده بيخلي فلاتر ميعملش ريفريش غير لما الموبايل يكون جاهز فعلاً
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) setState(() {});
+          });
+        }
       };
       _isGameRunning = true;
       _isPaused = false;
@@ -401,13 +412,6 @@ class _TetrisHomePageState extends State<TetrisHomePage> {
               topLeft: Radius.circular(35),
               topRight: Radius.circular(35),
             ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.4), // حل مشكلة black44
-                blurRadius: 10,
-                offset: const Offset(0, -2),
-              )
-            ],
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,

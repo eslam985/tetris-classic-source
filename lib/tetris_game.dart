@@ -377,9 +377,14 @@ class TetrisGame extends FlameGame
       score += _calculateScore(numLines);
       level = 1 + (linesCleared ~/ 5);
       // السرعة بتبدأ أبطأ (1.0) وبتزيد ببطء شديد جداً (0.05)
-      fallSpeed = max(0.2, 1.0 - (level - 1) * 0.05);
-      // السطر السحري اللي بيحدث الـ UI فوراً
-      onGameStateChanged?.call();
+      fallSpeed = max(0.4, 1.0 - (level - 1) * 0.05);
+      
+      // في دالة moveDown أو الـ Update
+      if (timeSinceLastFall >= fallSpeed) {
+        moveDown();
+        timeSinceLastFall = 0;
+        // شيل onGameStateChanged من هنا لو كانت موجودة
+      }
     }
 
     linesToClear.clear();
