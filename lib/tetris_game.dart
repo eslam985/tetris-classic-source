@@ -102,6 +102,7 @@ class TetrisGame extends FlameGame
         _performLineClear();
         isAnimating = false;
         clearAnimationTime = 0;
+        onGameStateChanged?.call(); // حدث الشاشة بعد الأنيميشن بس
       }
       return;
     }
@@ -110,6 +111,7 @@ class TetrisGame extends FlameGame
     if (timeSinceLastFall >= fallSpeed) {
       moveDown();
       timeSinceLastFall = 0;
+      // متبعتش تحديث للشاشة هنا، خليه جوه moveDown لو حصل تغيير فعلي
     }
   }
 
@@ -289,20 +291,24 @@ class TetrisGame extends FlameGame
   }
 
   void generateNewPiece() {
-    // 1. لو أول مرة نلعب، املأ قطعة الانتظار
+    // 1. املأ قطعة الانتظار لو فاضية
     nextPiece ??= Tetromino.getRandom();
 
-    // 2. القطعة الحالية تاخد "نسخة طبق الأصل" من اللي في الانتظار
+    // 2. القطعة الحالية تاخد النسخة اللي عليها الدور
     currentPiece = nextPiece!.copyWith(x: gridWidth ~/ 2 - 1, y: 0);
 
-    // 3. دلوقتي بس، ولّد قطعة جديدة لخانة الانتظار (Next Piece)
+    // 3. ولّد القطعة اللي جاية (Next Piece)
     nextPiece = Tetromino.getRandom();
-    onGameStateChanged?.call();
+
+    // 4. تشيك الخسارة (Game Over)
     if (currentPiece != null && !isValidPosition(currentPiece!)) {
       isGameOver = true;
       AudioManager.playGameOver();
-      onGameStateChanged?.call(); // تحديث عشان شاشة Game Over تظهر
     }
+
+    // 5. نداء واحد "فقط" في الآخر يحدث كل اللي حصل فوق مرة واحدة
+    // ده بيوفر على الموبايل مجهود إعادة الرسم مرتين في كسر من الثانية
+    onGameStateChanged?.call();
   }
 
   bool isValidPosition(Tetromino piece) {
@@ -377,8 +383,8 @@ class TetrisGame extends FlameGame
       score += _calculateScore(numLines);
       level = 1 + (linesCleared ~/ 5);
       // السرعة بتبدأ أبطأ (1.0) وبتزيد ببطء شديد جداً (0.05)
-      fallSpeed = max(0.4, 1.0 - (level - 1) * 0.05);
-      
+      fallSpeed = max(0.5, 1.0 - (level - 1) * 0.05);
+
       // في دالة moveDown أو الـ Update
       if (timeSinceLastFall >= fallSpeed) {
         moveDown();

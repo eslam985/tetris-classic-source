@@ -4,20 +4,16 @@ class AudioManager {
   static bool isMuted = false;
   static double volume = 0.7;
 
-  // تعريف المشغلات بشكل ثابت عشان نستخدمهم ونعملهم stop قبل الـ play
-  // ده بيمنع تراكم الأصوات ورا بعضها
-  static void _playQuickSound(String fileName, {double? customVolume}) {
-    if (isMuted) return;
-
-    // الحل السحري للتأخير: استخدام playPool لو متاح أو التحكم في الصوت يدوياً
-    // لكن الأسهل والأنسب لـ FlameAudio هو التأكد من استخدام mode خاص
-    FlameAudio.play(fileName, volume: customVolume ?? volume);
-  }
+  // تعريف الـ Pools للأصوات السريعة عشان نمنع التأخير
+  static AudioPool? _movePool;
+  static AudioPool? _rotatePool;
 
   static Future<void> loadSounds() async {
+    // تحميل الـ Pools مسبقاً (ده اللي بيخلي الصوت طلقة)
+    _movePool = await FlameAudio.createPool('move.mp3', maxPlayers: 1);
+    _rotatePool = await FlameAudio.createPool('rotate.mp3', maxPlayers: 1);
+
     await FlameAudio.audioCache.loadAll([
-      'move.mp3',
-      'rotate.mp3',
       'drop.mp3',
       'line_clear.mp3',
       'game_over.mp3',
@@ -25,43 +21,35 @@ class AudioManager {
     ]);
   }
 
-  // في حركات السرعة (Move & Rotate) بنستخدم حجم صوت أقل وسرعة استجابة أعلى
   static void playMove() {
-    _playQuickSound('move.mp3', customVolume: volume * 0.5);
+    if (isMuted || _movePool == null) return;
+    _movePool!.start(volume: volume * 0.5);
   }
 
   static void playRotate() {
-    _playQuickSound('rotate.mp3', customVolume: volume * 0.6);
+    if (isMuted || _rotatePool == null) return;
+    _rotatePool!.start(volume: volume * 0.6);
   }
 
-  static void playDrop() {
-    _playQuickSound('drop.mp3', customVolume: volume * 0.8);
+  // باقي الأصوات زي ما هي لأنها مش بتتكرر ورا بعضها بسرعة جنونية
+  static void _playQuickSound(String fileName, {double? customVolume}) {
+    if (isMuted) return;
+    FlameAudio.play(fileName, volume: customVolume ?? volume);
   }
 
-  static void playLineClear() {
-    _playQuickSound('line_clear.mp3');
-  }
-
-  static void playGameOver() {
-    _playQuickSound('game_over.mp3');
-  }
+  static void playDrop() =>
+      _playQuickSound('drop.mp3', customVolume: volume * 0.8);
+  static void playLineClear() => _playQuickSound('line_clear.mp3');
+  static void playGameOver() => _playQuickSound('game_over.mp3');
 
   static void playBackgroundMusic() {
-    if (!isMuted) {
-      FlameAudio.bgm.play('theme.mp3', volume: volume * 0.4);
-    }
+    if (!isMuted) FlameAudio.bgm.play('theme.mp3', volume: volume * 0.4);
   }
 
-  static void stopBackgroundMusic() {
-    FlameAudio.bgm.stop();
-  }
+  static void stopBackgroundMusic() => FlameAudio.bgm.stop();
 
   static void toggleMute() {
     isMuted = !isMuted;
-    if (isMuted) {
-      FlameAudio.bgm.stop();
-    } else {
-      playBackgroundMusic();
-    }
+    isMuted ? FlameAudio.bgm.stop() : playBackgroundMusic();
   }
 }

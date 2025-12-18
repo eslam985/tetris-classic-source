@@ -42,7 +42,6 @@ class _TetrisHomePageState extends State<TetrisHomePage> {
   void initState() {
     super.initState();
     _game = TetrisGame();
-
     // تعديل السطر السحري عشان يمنع التقطيع (Lag) في أول جيم
     _game.onGameStateChanged = () {
       if (mounted) {
