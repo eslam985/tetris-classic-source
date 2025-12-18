@@ -197,24 +197,30 @@ class _TetrisHomePageState extends State<TetrisHomePage> {
               ),
             ),
             Expanded(
-              child: Stack(
-                children: [
-                  GameWidget(
-                    game: _game,
-                    loadingBuilder: (context) => Center(
-                      child: CircularProgressIndicator(
-                        color: Theme.of(context).primaryColor,
+              child: Padding(
+                // --- التعديل السحري هنا ---
+                // بنضيف Padding سفلي 60 بكسل عشان نجبر اللعبة تبعد عن منطقة التسك بار
+                padding: const EdgeInsets.only(bottom: 60),
+                child: Stack(
+                  children: [
+                    // الـ ClipRect ده بيضمن إن اللعبة مترسمش أي حاجة بره الحدود الجديدة
+                    ClipRect(
+                      child: GameWidget(
+                        game: _game,
+                        loadingBuilder: (context) => Center(
+                          child: CircularProgressIndicator(
+                            color: Theme.of(context).primaryColor,
+                          ),
+                        ),
                       ),
                     ),
-                  ),
-                  if (_isPaused) _buildPauseOverlay(),
-                ],
+                    if (_isPaused) _buildPauseOverlay(),
+                  ],
+                ),
               ),
             ),
           ],
         ),
-
-        // زر كتم الصوت
         Positioned(
           top: 10,
           left: 10,

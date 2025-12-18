@@ -61,7 +61,6 @@ class TetrisGame extends FlameGame
     AudioManager.playBackgroundMusic(); // تشغيل موسيقى الخلفية
   }
 
-
   void _calculateBoardSize() {
     // هامش عمودي كبير للهرب من التسك بار والساعة
     const double verticalPadding = 160.0;
@@ -127,8 +126,7 @@ class TetrisGame extends FlameGame
     // --- السطر السحري هنا ---
     // ده بيخلي الـ Canvas يبدأ يرسم من الـ Offset اللي حسبناه (اللي فيه الـ 120 بكسل فرق)
     canvas.save();
-    canvas.translate(gameOffset.x, gameOffset.y);
-
+    canvas.translate(gameOffset.x, gameOffset.y - 40);
     // الآن كل الرسم اللي تحت هيترسم "نسبةً" للنقطة الجديدة
     // ملحوظة: لازم نستبدل boardStartX و boardStartY بـ 0
     // لأن الـ translate هي اللي قامت بالمهمة دي خلاص
