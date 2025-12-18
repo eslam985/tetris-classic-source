@@ -105,9 +105,8 @@ class TetrisGame extends FlameGame
       boardSize = Vector2(gridWidth * cellSize, gridHeight * cellSize);
       boardStartX = (size.x - boardSize.x) / 2;
       boardStartY = (size.y - boardSize.y) / 2;
-
-      // السطر ده هو اللي بيرفع اللعبة فوق التاسك بار فعلياً
-      gameOffset = Vector2(boardStartX, boardStartY);
+      // ارفع اللعبة لفوق شوية بخصم مسافة إضافية من الـ Y
+      gameOffset = Vector2(boardStartX, boardStartY - 30);
     }
   }
 
@@ -144,34 +143,48 @@ class TetrisGame extends FlameGame
       _calculateBoardSize();
     }
 
+    // --- السطر السحري هنا ---
+    // ده بيخلي الـ Canvas يبدأ يرسم من الـ Offset اللي حسبناه (اللي فيه الـ 120 بكسل فرق)
+    canvas.save();
+    canvas.translate(gameOffset.x, gameOffset.y);
+
+    // الآن كل الرسم اللي تحت هيترسم "نسبةً" للنقطة الجديدة
+    // ملحوظة: لازم نستبدل boardStartX و boardStartY بـ 0
+    // لأن الـ translate هي اللي قامت بالمهمة دي خلاص
+
+    // 1. رسم الخلفية
     canvas.drawRect(
-      Rect.fromLTWH(boardStartX, boardStartY, boardSize.x, boardSize.y),
+      Rect.fromLTWH(0, 0, boardSize.x, boardSize.y),
       backgroundPaint,
     );
 
+    // 2. رسم خطوط الشبكة الطولية
     for (int i = 0; i <= gridWidth; i++) {
-      final x = boardStartX + i * cellSize;
+      final x = i * cellSize;
       canvas.drawLine(
-        Offset(x, boardStartY),
-        Offset(x, boardStartY + boardSize.y),
+        Offset(x, 0),
+        Offset(x, boardSize.y),
         gridPaint,
       );
     }
 
+    // 3. رسم خطوط الشبكة العرضية
     for (int i = 0; i <= gridHeight; i++) {
-      final y = boardStartY + i * cellSize;
+      final y = i * cellSize;
       canvas.drawLine(
-        Offset(boardStartX, y),
-        Offset(boardStartX + boardSize.x, y),
+        Offset(0, y),
+        Offset(boardSize.x, y),
         gridPaint,
       );
     }
 
+    // 4. رسم الإطار الخارجي
     canvas.drawRect(
-      Rect.fromLTWH(boardStartX, boardStartY, boardSize.x, boardSize.y),
+      Rect.fromLTWH(0, 0, boardSize.x, boardSize.y),
       borderPaint,
     );
 
+    // 5. رسم المربعات المستقرة (Grid)
     for (int y = 0; y < gridHeight; y++) {
       for (int x = 0; x < gridWidth; x++) {
         if (grid[y][x] != 0) {
@@ -180,46 +193,34 @@ class TetrisGame extends FlameGame
       }
     }
 
+    // 6. رسم القطعة الحالية (عدلنا الـ parameters لـ 0,0)
     if (currentPiece != null) {
-      currentPiece!.render(canvas, boardStartX, boardStartY, cellSize);
+      currentPiece!.render(canvas, 0, 0, cellSize);
     }
 
     if (isAnimating) {
       _drawLineClearAnimation(canvas);
     }
 
+    canvas
+        .restore(); // بنرجع الـ canvas لحالته الطبيعية عشان نكتب التكست في نص الشاشة الحقيقي
+
+    // 7. رسم نصوص الحالة (تفضل في نص الشاشة الكلي)
     if (isGameOver) {
       _drawCenteredText(
-        canvas,
-        "GAME OVER",
-        32,
-        Colors.redAccent,
-        size.x / 2,
-        size.y / 2,
-      );
-      _drawCenteredText(
-        canvas,
-        "Tap to restart",
-        18,
-        Colors.white70,
-        size.x / 2,
-        size.y / 2 + 40,
-      );
+          canvas, "GAME OVER", 32, Colors.redAccent, size.x / 2, size.y / 2);
+      _drawCenteredText(canvas, "Tap to restart", 18, Colors.white70,
+          size.x / 2, size.y / 2 + 40);
     } else if (isPaused) {
       _drawCenteredText(
-        canvas,
-        "PAUSED",
-        32,
-        Colors.yellow,
-        size.x / 2,
-        size.y / 2,
-      );
+          canvas, "PAUSED", 32, Colors.yellow, size.x / 2, size.y / 2);
     }
   }
 
   void _drawCell(Canvas canvas, int x, int y, int type) {
-    final cellX = boardStartX + x * cellSize;
-    final cellY = boardStartY + y * cellSize;
+    // بدلاً من boardStartX + x * cellSize، نستخدم x * cellSize مباشرة
+    final cellX = x * cellSize;
+    final cellY = y * cellSize;
 
     final color = Tetromino.getColor(type);
     final cellPaint = Paint()..color = color;
@@ -258,10 +259,10 @@ class TetrisGame extends FlameGame
       ..style = PaintingStyle.fill;
 
     for (final line in linesToClear) {
-      final y = boardStartY + line * cellSize;
+      final y = line * cellSize; // هنا برضه شيل boardStartY
       canvas.drawRect(
         Rect.fromLTWH(
-          boardStartX,
+          0, // بدل boardStartX
           y,
           gridWidth * cellSize,
           cellSize * animationProgress,
@@ -319,10 +320,11 @@ class TetrisGame extends FlameGame
 
     // 3. دلوقتي بس، ولّد قطعة جديدة لخانة الانتظار (Next Piece)
     nextPiece = Tetromino.getRandom();
-
+    onGameStateChanged?.call();
     if (currentPiece != null && !isValidPosition(currentPiece!)) {
       isGameOver = true;
       AudioManager.playGameOver();
+      onGameStateChanged?.call(); // تحديث عشان شاشة Game Over تظهر
     }
   }
 

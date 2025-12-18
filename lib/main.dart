@@ -307,16 +307,37 @@ class _TetrisHomePageState extends State<TetrisHomePage> {
             bottom: false,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 _buildStatCard('SCORE', '${_game.score}'),
                 Column(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Text('NEXT',
-                        style: TextStyle(fontSize: 10, color: Colors.white70)),
-                    SizedBox(
-                      width: 50,
-                      height: 50,
-                      child: NextPieceDisplay(nextPiece: _game.nextPiece),
+                    const Text(
+                      'NEXT',
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: Colors.white70,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1.2,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Container(
+                      width: 65,
+                      height: 65,
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.black26,
+                        border: Border.all(color: Colors.white10, width: 1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Center(
+                        child: AspectRatio(
+                          aspectRatio: 1,
+                          child: NextPieceDisplay(nextPiece: _game.nextPiece),
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -337,15 +358,24 @@ class _TetrisHomePageState extends State<TetrisHomePage> {
             ],
           ),
         ),
-        // هذا هو الجزء الذي كان يسبب الخطأ، وضعناه مباشرة هنا
+
+        // تم إصلاح الـ Container السفلي هنا بإزالة const من الـ BoxDecoration والـ Shadow
         Container(
-          padding: const EdgeInsets.only(bottom: 20, top: 10),
-          decoration: const BoxDecoration(
-            color: Color(0xFF1D1E33),
-            borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(30),
-              topRight: Radius.circular(30),
+          padding: const EdgeInsets.only(bottom: 30, top: 15),
+          decoration: BoxDecoration(
+            // حذفنا const من هنا
+            color: const Color(0xFF1D1E33),
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(35),
+              topRight: Radius.circular(35),
             ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.4), // حل مشكلة black44
+                blurRadius: 10,
+                offset: const Offset(0, -2),
+              )
+            ],
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -355,9 +385,9 @@ class _TetrisHomePageState extends State<TetrisHomePage> {
                 () => _game.rotate(),
                 Colors.orangeAccent,
                 "Rotate",
-                size: 60,
+                size: 65,
               ),
-              const SizedBox(height: 5),
+              const SizedBox(height: 10),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
@@ -366,21 +396,21 @@ class _TetrisHomePageState extends State<TetrisHomePage> {
                     () => _game.moveLeft(),
                     Colors.blueAccent,
                     "Left",
-                    size: 60,
+                    size: 65,
                   ),
                   _buildCircleControl(
                     Icons.keyboard_double_arrow_down,
                     () => _game.hardDrop(),
                     Colors.redAccent,
                     "DROP",
-                    size: 65,
+                    size: 75,
                   ),
                   _buildCircleControl(
                     Icons.arrow_forward,
                     () => _game.moveRight(),
                     Colors.blueAccent,
                     "Right",
-                    size: 60,
+                    size: 65,
                   ),
                 ],
               ),
