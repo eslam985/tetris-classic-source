@@ -355,7 +355,7 @@ class _TetrisHomePageState extends State<TetrisHomePage> {
                       padding: const EdgeInsets.all(8),
                       // جوه دالة _buildNextPieceSection
                       decoration: BoxDecoration(
-                        color: Colors.blue, // لون فاقع للتجربة فقط
+                        color: const Color(0xFF24264D),
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Center(
@@ -373,15 +373,21 @@ class _TetrisHomePageState extends State<TetrisHomePage> {
           ),
         ),
         Expanded(
-          child: Stack(
-            children: [
-              GameWidget(
-                game: _game,
-                loadingBuilder: (context) =>
-                    const Center(child: CircularProgressIndicator()),
-              ),
-              if (_isPaused) _buildPauseOverlay(),
-            ],
+          child: RepaintBoundary(
+            // الحل السحري هنا: بيعزل رسم منطقة اللعب عن باقي الشاشة
+            child: Stack(
+              children: [
+                GameWidget(
+                  game: _game,
+                  // الـ key ده مهم جداً عشان فلاتر ميتلخبطش ويعيد بناء اللعبة من الصفر
+                  key: const ValueKey('tetris_game_widget'),
+                  loadingBuilder: (context) =>
+                      const Center(child: CircularProgressIndicator()),
+                ),
+                // الـ Overlay برضه لفيناه بـ RepaintBoundary عشان مياثرش على أداء اللعبة وهي شغالة
+                if (_isPaused) RepaintBoundary(child: _buildPauseOverlay()),
+              ],
+            ),
           ),
         ),
 
