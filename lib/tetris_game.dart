@@ -61,28 +61,26 @@ class TetrisGame extends FlameGame
     AudioManager.playBackgroundMusic(); // تشغيل موسيقى الخلفية
   }
 
+
   void _calculateBoardSize() {
-    // 1. تحديد هامش أمان كبير للارتفاع عشان التاسك بار (Desktop) والساعة (Mobile)
-    // 100 بكسل كافية جداً لتنفس اللعبة
-    const double verticalPadding = 100.0;
+    // هامش عمودي كبير للهرب من التسك بار والساعة
+    const double verticalPadding = 160.0;
     const double horizontalPadding = 40.0;
 
     final availableWidth = size.x - horizontalPadding;
     final availableHeight = size.y - verticalPadding;
 
-    // 2. حساب حجم المربع بناءً على الارتفاع المتاح "الصافي"
-    final cellSizeBasedOnWidth = availableWidth / gridWidth;
-    final cellSizeBasedOnHeight = availableHeight / gridHeight;
-
-    // 3. اختيار الحجم الأصغر لضمان أن اللعبة تظهر بالكامل
-    cellSize = min(cellSizeBasedOnWidth, cellSizeBasedOnHeight);
-
-    // 4. تحديث المتغيرات اللي اللعبة بتستخدمها في الرسم (مهم جداً)
+    cellSize = min(availableWidth / gridWidth, availableHeight / gridHeight);
     boardSize = Vector2(gridWidth * cellSize, gridHeight * cellSize);
-    boardStartX = (size.x - boardSize.x) / 2;
-    boardStartY = (size.y - boardSize.y) / 2;
 
-    // 5. تحديث الـ Offset اللي بيستخدمه المحرك
+    boardStartX = (size.x - boardSize.x) / 2;
+
+    // هنا اللعبة بتترفع: بنحطها في نص المساحة المتاحة وبنرفعها كمان 60 بكسل لفوق
+    boardStartY = (size.y - boardSize.y) / 2 - 60;
+
+    // تأمين: لو الارتفاع طلع بالسالب (في الشاشات الصغيرة جداً) خلية يبدأ من 20 بكسل
+    if (boardStartY < 20) boardStartY = 20;
+
     gameOffset = Vector2(boardStartX, boardStartY);
   }
 
@@ -91,31 +89,14 @@ class TetrisGame extends FlameGame
     super.onGameResize(size);
 
     if (size.x > 0 && size.y > 0) {
-      // استخدمنا const هنا عشان نحل مشكلة (prefer_const_declarations)
-      const double verticalPadding = 100.0;
-      const double horizontalPadding = 40.0;
-
-      double availableHeight = size.y - verticalPadding;
-      double availableWidth = size.x - horizontalPadding;
-
-      // حساب حجم المربع بناءً على المساحة الصافية
-      cellSize = min(availableWidth / gridWidth, availableHeight / gridHeight);
-
-      // تحديث الأبعاد اللي بيستخدمها ملف الرسم
-      boardSize = Vector2(gridWidth * cellSize, gridHeight * cellSize);
-      boardStartX = (size.x - boardSize.x) / 2;
-      boardStartY = (size.y - boardSize.y) / 2;
-      // ارفع اللعبة لفوق شوية بخصم مسافة إضافية من الـ Y
-      gameOffset = Vector2(boardStartX, boardStartY - 30);
+      // السطر ده لوحده كفاية جداً لأنه بينادي على الدالة اللي فيها الحسابات الجديدة
+      _calculateBoardSize();
     }
   }
 
   @override
   void update(double dt) {
     super.update(dt);
-    // ضيف السطر ده عشان السكور يفضل يتحدث لحظياً
-    onGameStateChanged?.call();
-
     if (isGameOver || isPaused || currentPiece == null) return;
 
     if (isAnimating) {
