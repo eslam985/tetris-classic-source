@@ -4,29 +4,45 @@ class AudioManager {
   static bool isMuted = false;
   static double volume = 0.7;
 
+  // تعريف الـ Pools للأصوات المتكررة
+  static AudioPool? _movePool;
+  static AudioPool? _rotatePool;
+
   static Future<void> loadSounds() async {
+    // 1. تحميل الموسيقى والأصوات التقيلة
     await FlameAudio.audioCache.loadAll([
-      'move.mp3',
-      'rotate.mp3',
-      'drop.mp3',
       'line_clear.mp3',
       'game_over.mp3',
       'theme.mp3',
+      'drop.mp3',
     ]);
+
+    // 2. إنشاء Pool للأصوات اللي بتشتغل كتير ورا بعض
+    _movePool = await FlameAudio.createPool(
+      'move.mp3',
+      maxPlayers: 3, // أقصى عدد أصوات يشتغلوا في نفس اللحظة
+    );
+
+    _rotatePool = await FlameAudio.createPool(
+      'rotate.mp3',
+      maxPlayers: 2,
+    );
   }
 
   static void playMove() {
-    if (isMuted) return;
-    FlameAudio.play('move.mp3', volume: volume * 0.3);
+    if (isMuted || _movePool == null) return;
+    // الـ Pool أسرع بـ 10 مرات من play العادية
+    _movePool!.start(volume: volume * 0.3);
   }
 
   static void playRotate() {
-    if (isMuted) return;
-    FlameAudio.play('rotate.mp3', volume: volume * 0.4);
+    if (isMuted || _rotatePool == null) return;
+    _rotatePool!.start(volume: volume * 0.4);
   }
 
   static void playDrop() {
     if (isMuted) return;
+    // الـ drop مش محتاج pool لأنه بيحصل مرة واحدة كل فترة
     FlameAudio.play('drop.mp3', volume: volume * 0.5);
   }
 
@@ -50,6 +66,10 @@ class AudioManager {
 
   static void toggleMute() {
     isMuted = !isMuted;
-    isMuted ? stopBackgroundMusic() : playBackgroundMusic();
+    if (isMuted) {
+      stopBackgroundMusic();
+    } else {
+      playBackgroundMusic();
+    }
   }
 }

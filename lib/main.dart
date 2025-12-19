@@ -43,23 +43,16 @@ class _TetrisHomePageState extends State<TetrisHomePage> {
   void initState() {
     super.initState();
     _game = TetrisGame();
-
-    // الربط المباشر والبسيط
-    _game.onGameStateChanged = () {
-      if (mounted) {
-        setState(() {
-          // التحديث هنا بقى آمن لأننا شيلنا الـ call من الـ update
-        });
-      }
-    };
+    // شيلنا الـ onGameStateChanged خالص لأننا هنستخدم الـ Notifiers جوه الـ Build
   }
 
   void _startGame() {
     setState(() {
       _isGameRunning = true;
       _isPaused = false;
-      _game.startGame();
     });
+    // تشغيل المحرك بعد ما نضمن إن الـ UI اتحدثت
+    _game.startGame();
   }
 
   void _togglePause() {
@@ -72,20 +65,14 @@ class _TetrisHomePageState extends State<TetrisHomePage> {
   }
 
   void _restartGame() {
-    setState(() {
-      _game = TetrisGame();
+    // بدل ما نمسح اللعبة ونعمل وحدة جديدة، الأفضل نصفر الحالة
+    // لكن لو عايز تمسحها، التعديل ده بيخليها أخف:
+    _game = TetrisGame();
+    _isGameRunning = true;
+    _isPaused = false;
+    _game.startGame();
 
-      // بنعيد الربط للنسخة الجديدة من اللعبة
-      _game.onGameStateChanged = () {
-        if (mounted) {
-          setState(() {});
-        }
-      };
-
-      _isGameRunning = true;
-      _isPaused = false;
-      _game.startGame();
-    });
+    setState(() {}); // بنعمل setState مرة واحدة بس عند الريستارت
   }
 
   void _toggleMute() {
@@ -410,7 +397,9 @@ class _TetrisHomePageState extends State<TetrisHomePage> {
                         child: Center(
                           child: AspectRatio(
                             aspectRatio: 1,
-                            child: NextPieceDisplay(nextPiece: _game.nextPiece),
+                            // التعديل هنا: غيرنا اسم البراميتر وبعتنا الـ Notifier نفسه
+                            child: NextPieceDisplay(
+                                nextPieceNotifier: _game.nextPieceNotifier),
                           ),
                         ),
                       ),
@@ -659,7 +648,9 @@ class _TetrisHomePageState extends State<TetrisHomePage> {
               child: Center(
                 child: AspectRatio(
                   aspectRatio: 1,
-                  child: NextPieceDisplay(nextPiece: _game.nextPiece),
+                  // التعديل الجوهري: نبعت المراقب (Notifier) بدل القيمة
+                  child: NextPieceDisplay(
+                      nextPieceNotifier: _game.nextPieceNotifier),
                 ),
               ),
             ),

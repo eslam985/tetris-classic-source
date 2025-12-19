@@ -3,28 +3,31 @@ import 'package:flutter/material.dart';
 import 'tetromino.dart';
 
 class NextPieceDisplay extends StatelessWidget {
-  final Tetromino? nextPiece;
-  const NextPieceDisplay({super.key, this.nextPiece});
+  // بنستقبل الـ Notifier نفسه مش القطعة
+  final ValueNotifier<Tetromino?> nextPieceNotifier;
+
+  const NextPieceDisplay({super.key, required this.nextPieceNotifier});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFF1A1A2E),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: nextPiece == null
-          ? const Center(
-              child: Icon(
-                Icons.question_mark,
-                color: Colors.white24,
-                size: 32,
-              ),
-            )
-          : CustomPaint(
-              // تم عزل الـ Painter لضمان سلاسة الرندر
-              painter: _NextPiecePainter(nextPiece!),
-            ),
+    // الـ ValueListenableBuilder هو اللي بيخلي التحديث "جراحي"
+    return ValueListenableBuilder<Tetromino?>(
+      valueListenable: nextPieceNotifier,
+      builder: (context, nextPiece, child) {
+        return Container(
+          decoration: BoxDecoration(
+            color: const Color(0xFF1A1A2E),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: nextPiece == null
+              ? const Center(
+                  child: Icon(Icons.question_mark,
+                      color: Colors.white24, size: 32))
+              : CustomPaint(
+                  painter: _NextPiecePainter(nextPiece),
+                ),
+        );
+      },
     );
   }
 }

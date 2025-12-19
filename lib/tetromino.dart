@@ -15,6 +15,16 @@ class Tetromino {
   final int rotation;
   final List<Block> blocks;
 
+  // 1. تعريف أدوات الرسم "مرة واحدة" كـ static لتوفير الرامات ومنع "النتشة"
+  static final Paint _fillPaint = Paint()..style = PaintingStyle.fill;
+
+  static final Paint _borderPaint = Paint()
+    ..color = Colors.black
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = 1.0;
+
+  static final Paint _highlightPaint = Paint()..style = PaintingStyle.fill;
+
   static const Map<int, List<List<Block>>> shapes = {
     1: [
       // I
@@ -88,7 +98,7 @@ class Tetromino {
   factory Tetromino.getRandom() {
     final random = Random();
     final type = random.nextInt(7) + 1;
-    const initialX = 5 - 2; // العودة إلى المركز للشبكة 10×20
+    const initialX = 3; // وضعية البداية في منتصف الشبكة 10x20
 
     return Tetromino(
       type: type,
@@ -125,40 +135,31 @@ class Tetromino {
     ];
   }
 
+  // 2. دالة الرسم المحسنة للأداء العالي (Level 8 Ready)
   void render(Canvas canvas, double startX, double startY, double cellSize) {
-    final color = colors[type]!;
+    _fillPaint.color = colors[type]!;
+    _highlightPaint.color = Colors.white.withValues(alpha: 0.3);
 
     for (final block in blocks) {
       final cellX = startX + (x + block.dx) * cellSize;
       final cellY = startY + (y + block.dy) * cellSize;
+      final rect =
+          Rect.fromLTWH(cellX + 0.5, cellY + 0.5, cellSize - 1, cellSize - 1);
 
-      final paint = Paint()..color = color;
-      canvas.drawRect(
-        Rect.fromLTWH(cellX + 0.5, cellY + 0.5, cellSize - 1, cellSize - 1),
-        paint,
-      );
+      // رسم الجسم الأساسي
+      canvas.drawRect(rect, _fillPaint);
 
-      final borderPaint = Paint()
-        ..color = Colors.black
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.0;
-      canvas.drawRect(
-        Rect.fromLTWH(cellX + 0.5, cellY + 0.5, cellSize - 1, cellSize - 1),
-        borderPaint,
-      );
+      // رسم الحدود (بدون إنشاء كائن Paint جديد)
+      canvas.drawRect(rect, _borderPaint);
 
-      // التعديل هنا ليتوافق مع تحديثات Flutter 2025
-      final highlightPaint = Paint()
-        ..color = Colors.white.withValues(alpha: 0.3)
-        ..style = PaintingStyle.fill;
-
+      // رسم اللمعة الجمالية
       canvas.drawRect(
         Rect.fromLTWH(cellX + 2, cellY + 2, cellSize - 6, 2),
-        highlightPaint,
+        _highlightPaint,
       );
       canvas.drawRect(
         Rect.fromLTWH(cellX + 2, cellY + 2, 2, cellSize - 6),
-        highlightPaint,
+        _highlightPaint,
       );
     }
   }

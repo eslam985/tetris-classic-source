@@ -8,7 +8,14 @@ import 'audio_manager.dart';
 
 class TetrisGame extends FlameGame with KeyboardEvents, TapCallbacks {
   Vector2 gameOffset = Vector2.zero();
-  VoidCallback? onGameStateChanged;
+
+  // 1. التعديل الجوهري: استبدال الـ Callback والـ variables العادية بـ Notifiers
+  // دي بتسمح لـ Flutter إنه يحدّث السكور أو القطعة الجاية بس من غير ما يهد اللعبة كلها
+  final scoreNotifier = ValueNotifier<int>(0);
+  final nextPieceNotifier = ValueNotifier<Tetromino?>(null);
+  final levelNotifier = ValueNotifier<int>(1);
+  final gameOverNotifier = ValueNotifier<bool>(false);
+
   static const int gridWidth = 10;
   static const int gridHeight = 20;
   double cellSize = 32.0;
@@ -20,19 +27,31 @@ class TetrisGame extends FlameGame with KeyboardEvents, TapCallbacks {
 
   late List<List<int>> grid;
   Tetromino? currentPiece;
-  Tetromino? nextPiece;
-  int score = 0;
+
+  // شيلنا الـ nextPiece العادية وخليناها تعتمد على الـ Notifier
+  Tetromino? get nextPiece => nextPieceNotifier.value;
+  set nextPiece(Tetromino? value) => nextPieceNotifier.value = value;
+
+  // السكور والفل بيتحكم فيهم الـ Notifier دلوقتي للأداء الأقصى
+  int get score => scoreNotifier.value;
+  set score(int value) => scoreNotifier.value = value;
+
+  int get level => levelNotifier.value;
+  set level(int value) => levelNotifier.value = value;
+
+  bool get isGameOver => gameOverNotifier.value;
+  set isGameOver(bool value) => gameOverNotifier.value = value;
+
   int linesCleared = 0;
-  int level = 1;
   double fallSpeed = 0.8;
   double timeSinceLastFall = 0;
-  bool isGameOver = false;
   bool isPaused = false;
 
   List<int> linesToClear = [];
   double clearAnimationTime = 0;
   bool isAnimating = false;
-// عرف الفرشة دي مرة واحدة فوق
+
+  // 2. أدوات الرسم (متازة كما هي، متعرفة مرة واحدة)
   final Paint _clearEffectPaint = Paint()..style = PaintingStyle.fill;
   final Paint gridPaint = Paint()
     ..color = Colors.white24
@@ -48,7 +67,6 @@ class TetrisGame extends FlameGame with KeyboardEvents, TapCallbacks {
     ..style = PaintingStyle.stroke
     ..strokeWidth = 3.0;
 
-  // تعريف أدوات الرسم مرة واحدة فقط لتوفير الذاكرة
   final Paint _cellPaint = Paint();
   final Paint _cellBorderPaint = Paint()
     ..color = Colors.black
@@ -60,15 +78,22 @@ class TetrisGame extends FlameGame with KeyboardEvents, TapCallbacks {
 
   @override
   Color backgroundColor() => const Color(0xFF1a1a2e);
-
   @override
   Future<void> onLoad() async {
+    // 1. استدعاء الـ super أول حاجة (صح)
     await super.onLoad();
-    await AudioManager.loadSounds(); // تحميل الأصوات
+
+    // 2. تحميل الأصوات (أهم خطوة ومكانها صح)
+    // بس اتأكد إن الـ loadSounds جواها الـ AudioPool اللي اتفقنا عليه
+    await AudioManager.loadSounds();
+
+    // 3. تهيئة البيانات (عمليات سريعة في الذاكرة)
     initializeGrid();
     generateNewPiece();
     _calculateBoardSize();
-    AudioManager.playBackgroundMusic(); // تشغيل موسيقى الخلفية
+
+    // 4. تشغيل المزيكا (آخر حاجة بعد ما نضمن إن كل الملفات في الـ Cache)
+    AudioManager.playBackgroundMusic();
   }
 
   void _calculateBoardSize() {
@@ -108,19 +133,23 @@ class TetrisGame extends FlameGame with KeyboardEvents, TapCallbacks {
 
     if (isAnimating) {
       clearAnimationTime += dt;
-      if (clearAnimationTime >= 0.5) {
+      if (clearAnimationTime >= 0.3) {
+        // قللنا الوقت لـ 0.3 عشان السلاسة
         _performLineClear();
         isAnimating = false;
         clearAnimationTime = 0;
-        // امسح السطر اللي بيعمل setState هنا لو مش ضروري
       }
+      // شيلنا الـ return عشان نسمح لباقي العمليات بالاستمرار لو محتاج
       return;
     }
 
     timeSinceLastFall += dt;
-    if (timeSinceLastFall >= fallSpeed) {
+
+    // التعديل الجوهري: استخدام while بدل if للتعامل مع اللاج المفاجئ
+    // ده بيضمن إن لو الجهاز هنج لحظة، القطعة تعوض مكانها بسرعة
+    while (timeSinceLastFall >= fallSpeed) {
       moveDown();
-      timeSinceLastFall = 0;
+      timeSinceLastFall -= fallSpeed; // اطرح الوقت بدل ما تصفرّه
     }
   }
 
@@ -251,24 +280,27 @@ class TetrisGame extends FlameGame with KeyboardEvents, TapCallbacks {
   }
 
   void generateNewPiece() {
-    // 1. املأ قطعة الانتظار لو فاضية
-    nextPiece ??= Tetromino.getRandom();
+    // 1. استخدام متغيرات محلية (شغل محترفين)
+    final next = nextPiece ?? Tetromino.getRandom();
 
-    // 2. القطعة الحالية تاخد النسخة اللي عليها الدور وتبدأ من فوق
-    currentPiece = nextPiece!.copyWith(x: gridWidth ~/ 2 - 1, y: 0);
+    // 2. تعيين القطعة الحالية
+    currentPiece = next.copyWith(x: gridWidth ~/ 2 - 1, y: 0);
 
-    // 3. ولّد القطعة اللي جاية (Next Piece) في الكاش
+    // 3. توليد القطعة القادمة وتحديث الـ Notifier أوتوماتيكياً
+    // الـ setter اللي عملناه في الكلاس هو اللي بيحدث الـ Notifier
     nextPiece = Tetromino.getRandom();
 
     // 4. تشيك الخسارة (Game Over)
-    if (currentPiece != null && !isValidPosition(currentPiece!)) {
-      isGameOver = true;
+    if (!isValidPosition(currentPiece!)) {
+      isGameOver = true; // ده دلوقتى بيحدث الـ gameOverNotifier أوتوماتيك
+      AudioManager.stopBackgroundMusic();
       AudioManager.playGameOver();
+      return; // شيلنا الـ call القديم
     }
 
-    // 5. التحديث هنا مهم جداً عشان الـ UI يعرف إن الـ Next Piece اتغيرت
-    // بس تأكد إن الـ Callback ده مبيعملش عمليات حسابية تقيلة
-    onGameStateChanged?.call();
+    // 5. التحديث بقى "تلقائي"
+    // أول ما عملنا nextPiece = ... الـ UI عرفت لوحدها
+    // مفيش داعي لمناداة onGameStateChanged خلاص
   }
 
   bool isValidPosition(Tetromino piece) {
@@ -308,7 +340,6 @@ class TetrisGame extends FlameGame with KeyboardEvents, TapCallbacks {
   }
 
   void lockPiece() {
-    // 1. تثبيت المتغيرات محلياً (أسرع بكتير من مناداة الـ Object كل شوية)
     final piece = currentPiece;
     if (piece == null) return;
 
@@ -317,7 +348,7 @@ class TetrisGame extends FlameGame with KeyboardEvents, TapCallbacks {
     final blocks = piece.blocks;
     final type = piece.type;
 
-    // 2. تحديث الشبكة (Grid) بأقل مجهود
+    // 1. التثبيت في الـ Grid (عملية سريعة جداً)
     for (int i = 0; i < blocks.length; i++) {
       final block = blocks[i];
       final gx = px + block.dx;
@@ -328,12 +359,19 @@ class TetrisGame extends FlameGame with KeyboardEvents, TapCallbacks {
       }
     }
 
-    // 3. الصوت يشتغل "في الخلفية"
+    // 2. الصوت (لازم يكون AudioPool عشان ميعملش لاج)
     AudioManager.playDrop();
 
-    // 4. الحسابات التقيلة (المسح وتوليد قطعة جديدة)
+    // 3. التحقق من السطور
     checkLines();
-    generateNewPiece();
+
+    // 4. "السر في السطر ده": توليد القطعة الجديدة
+    // لو مفيش أنميشن مسح سطور، ولد القطعة الجديدة فوراً
+    if (!isAnimating) {
+      generateNewPiece();
+    }
+    // ملاحظة: لو فيه أنميشن، generateNewPiece المفروض تتنادى
+    // بعد ما الأنميشن يخلص في دالة _performLineClear
   }
 
   void checkLines() {
@@ -381,8 +419,19 @@ class TetrisGame extends FlameGame with KeyboardEvents, TapCallbacks {
   }
 
   int _calculateScore(int lines) {
+    // 1. حماية ضد الأرقام غير المتوقعة
+    if (lines <= 0) return 0;
+
+    // 2. حساب السكور (الـ 800 للـ Tetris الأصلي)
     const lineScores = [0, 100, 300, 500, 800];
-    return (lineScores[lines] * level);
+    final addedScore = (lines < lineScores.length)
+        ? lineScores[lines] * level
+        : 1200 * level; // سكور احتياطي لو مسح أكتر من 4
+
+    // 3. تحديث الـ Notifier فوراً عشان الـ UI يحس بالتغيير بدون لاج
+    score += addedScore; // دي بتنادي الـ setter اللي بيحدث الـ Notifier
+
+    return addedScore;
   }
 
   void startGame() {
