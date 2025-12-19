@@ -6,8 +6,7 @@ import 'package:flutter/services.dart';
 import 'tetromino.dart';
 import 'audio_manager.dart';
 
-class TetrisGame extends FlameGame
-    with KeyboardEvents, TapCallbacks, HasCollisionDetection {
+class TetrisGame extends FlameGame with KeyboardEvents, TapCallbacks {
   Vector2 gameOffset = Vector2.zero();
   VoidCallback? onGameStateChanged;
   static const int gridWidth = 10;
@@ -102,7 +101,7 @@ class TetrisGame extends FlameGame
         _performLineClear();
         isAnimating = false;
         clearAnimationTime = 0;
-        onGameStateChanged?.call(); // حدث الشاشة بعد الأنيميشن بس
+        // امسح السطر اللي بيعمل setState هنا لو مش ضروري
       }
       return;
     }
@@ -111,68 +110,35 @@ class TetrisGame extends FlameGame
     if (timeSinceLastFall >= fallSpeed) {
       moveDown();
       timeSinceLastFall = 0;
-      // متبعتش تحديث للشاشة هنا، خليه جوه moveDown لو حصل تغيير فعلي
     }
   }
 
   @override
   void render(Canvas canvas) {
     super.render(canvas);
+    if (boardSize.x == 0) _calculateBoardSize();
 
-    if (boardSize.x == 0) {
-      _calculateBoardSize();
-    }
-
-    // --- السطر السحري هنا ---
-    // ده بيخلي الـ Canvas يبدأ يرسم من الـ Offset اللي حسبناه (اللي فيه الـ 120 بكسل فرق)
     canvas.save();
     canvas.translate(gameOffset.x, gameOffset.y);
-    // الآن كل الرسم اللي تحت هيترسم "نسبةً" للنقطة الجديدة
-    // ملحوظة: لازم نستبدل boardStartX و boardStartY بـ 0
-    // لأن الـ translate هي اللي قامت بالمهمة دي خلاص
 
-    // 1. رسم الخلفية
+    // 1. رسم الخلفية مرة واحدة
     canvas.drawRect(
-      Rect.fromLTWH(0, 0, boardSize.x, boardSize.y),
-      backgroundPaint,
-    );
+        Rect.fromLTWH(0, 0, boardSize.x, boardSize.y), backgroundPaint);
 
-    // 2. رسم خطوط الشبكة الطولية
-    for (int i = 0; i <= gridWidth; i++) {
-      final x = i * cellSize;
-      canvas.drawLine(
-        Offset(x, 0),
-        Offset(x, boardSize.y),
-        gridPaint,
-      );
-    }
+    // 2. رسم الإطار الخارجي (مهم جداً للرؤية)
+    canvas.drawRect(Rect.fromLTWH(0, 0, boardSize.x, boardSize.y), borderPaint);
 
-    // 3. رسم خطوط الشبكة العرضية
-    for (int i = 0; i <= gridHeight; i++) {
-      final y = i * cellSize;
-      canvas.drawLine(
-        Offset(0, y),
-        Offset(boardSize.x, y),
-        gridPaint,
-      );
-    }
-
-    // 4. رسم الإطار الخارجي
-    canvas.drawRect(
-      Rect.fromLTWH(0, 0, boardSize.x, boardSize.y),
-      borderPaint,
-    );
-
-    // 5. رسم المربعات المستقرة (Grid)
+    // 3. تحسين رسم المربعات المستقرة (رسم المشغول فقط)
     for (int y = 0; y < gridHeight; y++) {
       for (int x = 0; x < gridWidth; x++) {
         if (grid[y][x] != 0) {
+          // لو الخانة فيها مكعب فعلاً ارسمه
           _drawCell(canvas, x, y, grid[y][x]);
         }
       }
     }
 
-    // 6. رسم القطعة الحالية (عدلنا الـ parameters لـ 0,0)
+    // 4. رسم القطعة اللي بتتحرك دلوقتي
     if (currentPiece != null) {
       currentPiece!.render(canvas, 0, 0, cellSize);
     }
@@ -181,18 +147,12 @@ class TetrisGame extends FlameGame
       _drawLineClearAnimation(canvas);
     }
 
-    canvas
-        .restore(); // بنرجع الـ canvas لحالته الطبيعية عشان نكتب التكست في نص الشاشة الحقيقي
+    canvas.restore();
 
-    // 7. رسم نصوص الحالة (تفضل في نص الشاشة الكلي)
+    // 5. رسم نصوص الحالة
     if (isGameOver) {
       _drawCenteredText(
           canvas, "GAME OVER", 32, Colors.redAccent, size.x / 2, size.y / 2);
-      _drawCenteredText(canvas, "Tap to restart", 18, Colors.white70,
-          size.x / 2, size.y / 2 + 40);
-    } else if (isPaused) {
-      _drawCenteredText(
-          canvas, "PAUSED", 32, Colors.yellow, size.x / 2, size.y / 2);
     }
   }
 
