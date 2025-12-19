@@ -47,6 +47,16 @@ class TetrisGame extends FlameGame with KeyboardEvents, TapCallbacks {
     ..style = PaintingStyle.stroke
     ..strokeWidth = 3.0;
 
+  // تعريف أدوات الرسم مرة واحدة فقط لتوفير الذاكرة
+  final Paint _cellPaint = Paint();
+  final Paint _cellBorderPaint = Paint()
+    ..color = Colors.black
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = 1.0;
+  final Paint _highlightPaint = Paint()
+    ..color = Colors.white.withValues(alpha: 0.2)
+    ..style = PaintingStyle.fill;
+
   @override
   Color backgroundColor() => const Color(0xFF1a1a2e);
 
@@ -157,38 +167,26 @@ class TetrisGame extends FlameGame with KeyboardEvents, TapCallbacks {
   }
 
   void _drawCell(Canvas canvas, int x, int y, int type) {
-    // بدلاً من boardStartX + x * cellSize، نستخدم x * cellSize مباشرة
     final cellX = x * cellSize;
     final cellY = y * cellSize;
 
-    final color = Tetromino.getColor(type);
-    final cellPaint = Paint()..color = color;
+    // بنغير اللون بس في الأداة اللي عرفناها فوق بدل ما ننشئ واحدة جديدة
+    _cellPaint.color = Tetromino.getColor(type);
 
-    canvas.drawRect(
-      Rect.fromLTWH(cellX + 0.5, cellY + 0.5, cellSize - 1, cellSize - 1),
-      cellPaint,
-    );
+    final rect =
+        Rect.fromLTWH(cellX + 0.5, cellY + 0.5, cellSize - 1, cellSize - 1);
 
-    final borderPaint = Paint()
-      ..color = Colors.black
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.0;
-    canvas.drawRect(
-      Rect.fromLTWH(cellX + 0.5, cellY + 0.5, cellSize - 1, cellSize - 1),
-      borderPaint,
-    );
+    // 1. رسم جسم المربع
+    canvas.drawRect(rect, _cellPaint);
 
-    final highlightPaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.2)
-      ..style = PaintingStyle.fill;
+    // 2. رسم الإطار الأسود (باستخدام الأداة الجاهزة)
+    canvas.drawRect(rect, _cellBorderPaint);
+
+    // 3. رسم تأثير الإضاءة (Highlight)
     canvas.drawRect(
-      Rect.fromLTWH(cellX + 2, cellY + 2, cellSize - 6, 2),
-      highlightPaint,
-    );
+        Rect.fromLTWH(cellX + 2, cellY + 2, cellSize - 6, 2), _highlightPaint);
     canvas.drawRect(
-      Rect.fromLTWH(cellX + 2, cellY + 2, 2, cellSize - 6),
-      highlightPaint,
-    );
+        Rect.fromLTWH(cellX + 2, cellY + 2, 2, cellSize - 6), _highlightPaint);
   }
 
   void _drawLineClearAnimation(Canvas canvas) {
@@ -254,10 +252,10 @@ class TetrisGame extends FlameGame with KeyboardEvents, TapCallbacks {
     // 1. املأ قطعة الانتظار لو فاضية
     nextPiece ??= Tetromino.getRandom();
 
-    // 2. القطعة الحالية تاخد النسخة اللي عليها الدور
+    // 2. القطعة الحالية تاخد النسخة اللي عليها الدور وتبدأ من فوق
     currentPiece = nextPiece!.copyWith(x: gridWidth ~/ 2 - 1, y: 0);
 
-    // 3. ولّد القطعة اللي جاية (Next Piece)
+    // 3. ولّد القطعة اللي جاية (Next Piece) في الكاش
     nextPiece = Tetromino.getRandom();
 
     // 4. تشيك الخسارة (Game Over)
@@ -266,8 +264,8 @@ class TetrisGame extends FlameGame with KeyboardEvents, TapCallbacks {
       AudioManager.playGameOver();
     }
 
-    // 5. نداء واحد "فقط" في الآخر يحدث كل اللي حصل فوق مرة واحدة
-    // ده بيوفر على الموبايل مجهود إعادة الرسم مرتين في كسر من الثانية
+    // 5. التحديث هنا مهم جداً عشان الـ UI يعرف إن الـ Next Piece اتغيرت
+    // بس تأكد إن الـ Callback ده مبيعملش عمليات حسابية تقيلة
     onGameStateChanged?.call();
   }
 

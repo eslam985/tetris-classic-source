@@ -42,12 +42,12 @@ class _TetrisHomePageState extends State<TetrisHomePage> {
   void initState() {
     super.initState();
     _game = TetrisGame();
-    // تعديل السطر السحري عشان يمنع التقطيع (Lag) في أول جيم
+
+    // الربط المباشر والبسيط
     _game.onGameStateChanged = () {
       if (mounted) {
-        // بنستخدم addPostFrameCallback عشان الـ setState تستنى الفريم اللي عليه الدور
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) setState(() {});
+        setState(() {
+          // التحديث هنا بقى آمن لأننا شيلنا الـ call من الـ update
         });
       }
     };
@@ -73,15 +73,14 @@ class _TetrisHomePageState extends State<TetrisHomePage> {
   void _restartGame() {
     setState(() {
       _game = TetrisGame();
-      // لازم نعيد الربط لما نكريت نسخة جديدة من اللعبة
+
+      // بنعيد الربط للنسخة الجديدة من اللعبة
       _game.onGameStateChanged = () {
         if (mounted) {
-          // السطر ده بيخلي فلاتر ميعملش ريفريش غير لما الموبايل يكون جاهز فعلاً
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted) setState(() {});
-          });
+          setState(() {});
         }
       };
+
       _isGameRunning = true;
       _isPaused = false;
       _game.startGame();

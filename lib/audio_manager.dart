@@ -4,13 +4,9 @@ class AudioManager {
   static bool isMuted = false;
   static double volume = 0.7;
 
-  // هنستخدم AudioPlayer ثابت لكل صوت عشان نمنع الـ Overhead بتاع إنشاء لاعب جديد
-  static late AudioPlayer _movePlayer;
-  static late AudioPlayer _rotatePlayer;
-  static late AudioPlayer _dropPlayer;
-
   static Future<void> loadSounds() async {
-    // تحميل مسبق في الكاش
+    // مكتبة Flame بتدور أوتوماتيك جوه assets/audio/
+    // فبنكتب اسم الملف مباشرة
     await FlameAudio.audioCache.loadAll([
       'move.mp3',
       'rotate.mp3',
@@ -19,45 +15,40 @@ class AudioManager {
       'game_over.mp3',
       'theme.mp3',
     ]);
-
-    // تثبيت اللاعبين للأصوات الأكثر تكراراً
-    _movePlayer = await FlameAudio.play('move.mp3', volume: 0);
-    _rotatePlayer = await FlameAudio.play('rotate.mp3', volume: 0);
-    _dropPlayer = await FlameAudio.play('drop.mp3', volume: 0);
   }
 
-  static void playMove() async {
+  // استخدمنا FlameAudio.play مباشرة لأنه أخف بكتير مع الـ Flame Engine
+  // وبما إننا عملنا loadAll فوق، الصوت هيشتغل من الـ Cache فوراً
+  static void playMove() {
     if (isMuted) return;
-    // السر هنا: بنعمل Seek للبداية وبنشغل نفس اللاعب بدل ما نفتح واحد جديد
-    await _movePlayer.stop();
-    _movePlayer.play(AssetSource('sounds/move.mp3'), volume: volume * 0.5);
+    FlameAudio.play('move.mp3', volume: volume * 0.4);
   }
 
-  static void playRotate() async {
+  static void playRotate() {
     if (isMuted) return;
-    await _rotatePlayer.stop();
-    _rotatePlayer.play(AssetSource('sounds/rotate.mp3'), volume: volume * 0.6);
+    FlameAudio.play('rotate.mp3', volume: volume * 0.5);
   }
 
-  static void playDrop() async {
+  static void playDrop() {
     if (isMuted) return;
-    await _dropPlayer.stop();
-    _dropPlayer.play(AssetSource('sounds/drop.mp3'), volume: volume * 0.8);
+    FlameAudio.play('drop.mp3', volume: volume * 0.6);
   }
 
-  // الأصوات اللي مش بتتكرر كتير نسيبها عادية
-  static void _playQuickSound(String fileName, {double? customVolume}) {
+  static void playLineClear() {
     if (isMuted) return;
-    FlameAudio.play(fileName, volume: customVolume ?? volume);
+    FlameAudio.play('line_clear.mp3', volume: volume);
   }
 
-  static void playLineClear() => _playQuickSound('line_clear.mp3');
-  static void playGameOver() => _playQuickSound('game_over.mp3');
+  static void playGameOver() {
+    if (isMuted) return;
+    FlameAudio.play('game_over.mp3', volume: volume);
+  }
 
   static void playBackgroundMusic() {
     if (!isMuted) {
+      // الـ BGM مخصص للموسيقى الطويلة عشان ميعملش لاج
       if (!FlameAudio.bgm.isPlaying) {
-        FlameAudio.bgm.play('theme.mp3', volume: volume * 0.4);
+        FlameAudio.bgm.play('theme.mp3', volume: volume * 0.3);
       }
     }
   }
@@ -66,12 +57,6 @@ class AudioManager {
 
   static void toggleMute() {
     isMuted = !isMuted;
-    if (isMuted) {
-      stopBackgroundMusic();
-      _movePlayer.stop();
-      _rotatePlayer.stop();
-    } else {
-      playBackgroundMusic();
-    }
+    isMuted ? FlameAudio.bgm.stop() : playBackgroundMusic();
   }
 }
