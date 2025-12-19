@@ -5,8 +5,6 @@ class AudioManager {
   static double volume = 0.7;
 
   static Future<void> loadSounds() async {
-    // مكتبة Flame بتدور أوتوماتيك جوه assets/audio/
-    // فبنكتب اسم الملف مباشرة
     await FlameAudio.audioCache.loadAll([
       'move.mp3',
       'rotate.mp3',
@@ -17,21 +15,19 @@ class AudioManager {
     ]);
   }
 
-  // استخدمنا FlameAudio.play مباشرة لأنه أخف بكتير مع الـ Flame Engine
-  // وبما إننا عملنا loadAll فوق، الصوت هيشتغل من الـ Cache فوراً
   static void playMove() {
     if (isMuted) return;
-    FlameAudio.play('move.mp3', volume: volume * 0.4);
+    FlameAudio.play('move.mp3', volume: volume * 0.3);
   }
 
   static void playRotate() {
     if (isMuted) return;
-    FlameAudio.play('rotate.mp3', volume: volume * 0.5);
+    FlameAudio.play('rotate.mp3', volume: volume * 0.4);
   }
 
   static void playDrop() {
     if (isMuted) return;
-    FlameAudio.play('drop.mp3', volume: volume * 0.6);
+    FlameAudio.play('drop.mp3', volume: volume * 0.5);
   }
 
   static void playLineClear() {
@@ -45,11 +41,8 @@ class AudioManager {
   }
 
   static void playBackgroundMusic() {
-    if (!isMuted) {
-      // الـ BGM مخصص للموسيقى الطويلة عشان ميعملش لاج
-      if (!FlameAudio.bgm.isPlaying) {
-        FlameAudio.bgm.play('theme.mp3', volume: volume * 0.3);
-      }
+    if (!isMuted && !FlameAudio.bgm.isPlaying) {
+      FlameAudio.bgm.play('theme.mp3', volume: volume * 0.2);
     }
   }
 
@@ -57,6 +50,6 @@ class AudioManager {
 
   static void toggleMute() {
     isMuted = !isMuted;
-    isMuted ? FlameAudio.bgm.stop() : playBackgroundMusic();
+    isMuted ? stopBackgroundMusic() : playBackgroundMusic();
   }
 }

@@ -32,7 +32,8 @@ class TetrisGame extends FlameGame with KeyboardEvents, TapCallbacks {
   List<int> linesToClear = [];
   double clearAnimationTime = 0;
   bool isAnimating = false;
-
+// عرف الفرشة دي مرة واحدة فوق
+  final Paint _clearEffectPaint = Paint()..style = PaintingStyle.fill;
   final Paint gridPaint = Paint()
     ..color = Colors.white24
     ..style = PaintingStyle.stroke
@@ -191,20 +192,21 @@ class TetrisGame extends FlameGame with KeyboardEvents, TapCallbacks {
 
   void _drawLineClearAnimation(Canvas canvas) {
     final animationProgress = min(1.0, clearAnimationTime / 0.5);
-    final animationPaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.7 * (1 - animationProgress))
-      ..style = PaintingStyle.fill;
+
+    // بدل ما نكريه Object جديد، بنعدل لون الفرشة اللي عرفناها فوق
+    _clearEffectPaint.color =
+        Colors.white.withValues(alpha: 0.7 * (1 - animationProgress));
 
     for (final line in linesToClear) {
-      final y = line * cellSize; // هنا برضه شيل boardStartY
+      final y = line * cellSize;
       canvas.drawRect(
         Rect.fromLTWH(
-          0, // بدل boardStartX
+          0,
           y,
           gridWidth * cellSize,
           cellSize * animationProgress,
         ),
-        animationPaint,
+        _clearEffectPaint, // استخدم الفرشة الجاهزة
       );
     }
   }
@@ -270,12 +272,25 @@ class TetrisGame extends FlameGame with KeyboardEvents, TapCallbacks {
   }
 
   bool isValidPosition(Tetromino piece) {
-    for (final block in piece.blocks) {
-      final gx = piece.x + block.dx;
-      final gy = piece.y + block.dy;
+    // 1. استخراج الـ blocks في متغير محلي عشان نوفر الوصول المتكرر للـ Object
+    final blocks = piece.blocks;
+    final px = piece.x;
+    final py = piece.y;
 
-      if (gx < 0 || gx >= gridWidth || gy >= gridHeight) return false;
-      if (gy >= 0 && grid[gy][gx] != 0) return false;
+    for (int i = 0; i < blocks.length; i++) {
+      final block = blocks[i];
+      final gx = px + block.dx;
+      final gy = py + block.dy;
+
+      // 2. التحقق من الحدود (أسرع عملية رفض)
+      if (gx < 0 || gx >= gridWidth || gy >= gridHeight) {
+        return false;
+      }
+
+      // 3. التحقق من التصادم مع المكعبات المستقرة (فقط لو القطعة جوه حدود الـ Grid الطولية)
+      if (gy >= 0 && grid[gy][gx] != 0) {
+        return false;
+      }
     }
     return true;
   }
@@ -293,19 +308,30 @@ class TetrisGame extends FlameGame with KeyboardEvents, TapCallbacks {
   }
 
   void lockPiece() {
-    if (currentPiece == null) return;
+    // 1. تثبيت المتغيرات محلياً (أسرع بكتير من مناداة الـ Object كل شوية)
+    final piece = currentPiece;
+    if (piece == null) return;
 
-    AudioManager.playDrop(); // صوت تثبيت القطعة
+    final px = piece.x;
+    final py = piece.y;
+    final blocks = piece.blocks;
+    final type = piece.type;
 
-    for (final block in currentPiece!.blocks) {
-      final gx = currentPiece!.x + block.dx;
-      final gy = currentPiece!.y + block.dy;
+    // 2. تحديث الشبكة (Grid) بأقل مجهود
+    for (int i = 0; i < blocks.length; i++) {
+      final block = blocks[i];
+      final gx = px + block.dx;
+      final gy = py + block.dy;
 
       if (gy >= 0 && gy < gridHeight && gx >= 0 && gx < gridWidth) {
-        grid[gy][gx] = currentPiece!.type;
+        grid[gy][gx] = type;
       }
     }
 
+    // 3. الصوت يشتغل "في الخلفية"
+    AudioManager.playDrop();
+
+    // 4. الحسابات التقيلة (المسح وتوليد قطعة جديدة)
     checkLines();
     generateNewPiece();
   }
@@ -384,30 +410,38 @@ class TetrisGame extends FlameGame with KeyboardEvents, TapCallbacks {
 
   void moveLeft() {
     if (isGameOver || isPaused || currentPiece == null) return;
+
     final newPiece = currentPiece!.copyWith(x: currentPiece!.x - 1);
     if (isValidPosition(newPiece)) {
       currentPiece = newPiece;
-      AudioManager.playMove(); // صوت الحركة
+      // نادِ الصوت بدون await وبدون ما تشغل بالك بالنتيجة
+      AudioManager.playMove();
     }
   }
 
   void moveRight() {
     if (isGameOver || isPaused || currentPiece == null) return;
+
     final newPiece = currentPiece!.copyWith(x: currentPiece!.x + 1);
     if (isValidPosition(newPiece)) {
       currentPiece = newPiece;
-      AudioManager.playMove(); // صوت الحركة
+      AudioManager.playMove();
     }
   }
 
   void rotate() {
     if (isGameOver || isPaused || currentPiece == null) return;
 
+    // 1. حساب الوضع الجديد
     final newPiece = currentPiece!.copyWith(
       rotation: (currentPiece!.rotation + 1) % 4,
     );
 
-    for (final kick in newPiece.getWallKicks()) {
+    // 2. تجربة الـ Wall Kicks (لو getWallKicks بترجع قائمة ثابتة يبقي تمام)
+    final kicks = newPiece.getWallKicks();
+
+    for (int i = 0; i < kicks.length; i++) {
+      final kick = kicks[i];
       final kickedPiece = newPiece.copyWith(
         x: newPiece.x + kick.x,
         y: newPiece.y + kick.y,
@@ -415,7 +449,9 @@ class TetrisGame extends FlameGame with KeyboardEvents, TapCallbacks {
 
       if (isValidPosition(kickedPiece)) {
         currentPiece = kickedPiece;
-        AudioManager.playRotate(); // صوت الدوران
+
+        // 3. استدعاء الصوت بدون انتظار (Fire and Forget)
+        AudioManager.playRotate();
         return;
       }
     }
@@ -424,15 +460,24 @@ class TetrisGame extends FlameGame with KeyboardEvents, TapCallbacks {
   void hardDrop() {
     if (isGameOver || isPaused || currentPiece == null) return;
 
+    int dropDistance = 0; // عرفناه هنا
+
     while (true) {
       final newPiece = currentPiece!.copyWith(y: currentPiece!.y + 1);
       if (isValidPosition(newPiece)) {
         currentPiece = newPiece;
+        dropDistance++; // زودناه هنا
       } else {
-        lockPiece();
         break;
       }
     }
+
+    // استخدمه هنا عشان تشيل الـ Warning وتدي سكور إضافي
+    if (dropDistance > 0) {
+      score += dropDistance * 2; // اللاعب ياخد نقطتين عن كل بلاطة نزلها بسرعة
+    }
+
+    lockPiece();
   }
 
   @override

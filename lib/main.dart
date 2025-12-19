@@ -4,6 +4,7 @@ import 'tetris_game.dart';
 import 'next_piece_display.dart';
 import 'audio_manager.dart'; // أضف هذا الاستيراد
 import 'dart:ui'; // السطر ده هو اللي هيعرف فلاتر يعني إيه ImageFilter
+import 'game_over_dialog.dart'; // تأكد إن الاسم صح زي ما هو في الـ folder
 
 void main() {
   runApp(const MyApp());
@@ -175,80 +176,101 @@ class _TetrisHomePageState extends State<TetrisHomePage> {
         Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Container(
-              width: 260,
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-              color: const Color(0xFF1D1E33),
-              child: SafeArea(
-                child: SingleChildScrollView(
-                  physics: const BouncingScrollPhysics(),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        'TETRIS',
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(context).primaryColor,
+            // 1. عزل الـ Sidebar بالكامل
+            RepaintBoundary(
+              child: Container(
+                width: 260,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                color: const Color(0xFF1D1E33),
+                child: SafeArea(
+                  child: SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'TETRIS',
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: Theme.of(context).primaryColor,
+                          ),
                         ),
-                      ),
-                      const Text(
-                        'CLASSIC',
-                        style: TextStyle(fontSize: 10, color: Colors.white70),
-                      ),
-                      const SizedBox(height: 10),
-                      _buildStatsSection(),
-                      const SizedBox(height: 10),
-                      // لفيتها بـ RepaintBoundary عشان نجبر فلاتر يرسمها لوحدها
-                      RepaintBoundary(
-                        child: _buildNextPieceSection(),
-                      ),
-                      const SizedBox(height: 10),
-                      _buildControlsSection(),
-                      const SizedBox(height: 15),
-                      _buildInstructions(),
-                    ],
+                        const Text(
+                          'CLASSIC',
+                          style: TextStyle(fontSize: 10, color: Colors.white70),
+                        ),
+                        const SizedBox(height: 10),
+                        // حطينا الـ Stats والـ Controls جوه نفس الـ Boundary بتاع السايدبار
+                        _buildStatsSection(),
+                        const SizedBox(height: 10),
+                        _buildNextPieceSection(),
+                        const SizedBox(height: 10),
+                        _buildControlsSection(),
+                        const SizedBox(height: 15),
+                        _buildInstructions(),
+                      ],
+                    ),
                   ),
                 ),
               ),
             ),
+
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.only(bottom: 5),
                 child: Stack(
                   alignment: Alignment.center,
                   children: [
-                    ClipRect(
-                      child: GameWidget(
-                        game: _game,
-                        loadingBuilder: (context) => Center(
-                          child: CircularProgressIndicator(
-                            color: Theme.of(context).primaryColor,
+                    // محرك اللعبة معزول وجاهز
+                    RepaintBoundary(
+                      child: ClipRect(
+                        child: GameWidget(
+                          game: _game,
+                          key: const ValueKey('tetris_desktop_widget'),
+                          loadingBuilder: (context) => Center(
+                            child: CircularProgressIndicator(
+                              color: Theme.of(context).primaryColor,
+                            ),
                           ),
                         ),
                       ),
                     ),
                     if (_isPaused) _buildPauseOverlay(),
+
+                    // ضيف الـ GameOverDialog هنا برضه لو محتاجه للديسكتوب
+                    if (_game.isGameOver)
+                      GameOverDialog(
+                        score: _game.score,
+                        lines: _game.linesCleared,
+                        level: _game.level,
+                        onRestart: _restartGame,
+                        onQuit: () => setState(() => _isGameRunning = false),
+                      ),
                   ],
                 ),
               ),
             ),
           ],
         ),
+
+        // 2. عزل زرار الصوت
         Positioned(
           top: 15,
           right: 15,
-          child: Material(
-            color: Colors.transparent,
-            child: IconButton(
-              icon: Icon(
-                _isMuted ? Icons.volume_off : Icons.volume_up,
-                color: Colors.white,
-                size: 28,
+          child: RepaintBoundary(
+            child: Material(
+              color: Colors.transparent,
+              child: IconButton(
+                icon: Icon(
+                  _isMuted ? Icons.volume_off : Icons.volume_up,
+                  color: Colors.white,
+                  size: 28,
+                ),
+                onPressed: _toggleMute,
               ),
-              onPressed: _toggleMute,
             ),
           ),
         ),
@@ -261,73 +283,90 @@ class _TetrisHomePageState extends State<TetrisHomePage> {
       children: [
         Column(
           children: [
-            // الجزء العلوي (Stats)
-            Container(
-              height: 70, // زودناه سنة عشان الراحة
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              color: const Color(0xFF1D1E33),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  _buildStatCard('SCORE', '${_game.score}'),
-                  _buildStatCard('LEVEL', '${_game.level}'),
-                  _buildStatCard('LINES', '${_game.linesCleared}'),
-                ],
+            // 1. عزل الجزء العلوي (Stats)
+            RepaintBoundary(
+              child: Container(
+                height: 70,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                color: const Color(0xFF1D1E33),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    _buildStatCard('SCORE', '${_game.score}'),
+                    _buildStatCard('LEVEL', '${_game.level}'),
+                    _buildStatCard('LINES', '${_game.linesCleared}'),
+                  ],
+                ),
               ),
             ),
 
-            // منطقة اللعبة
+            // 2. منطقة اللعبة (معزولة ومحمية)
             Expanded(
-              child: GameWidget(
-                game: _game,
-                loadingBuilder: (context) =>
-                    const Center(child: CircularProgressIndicator()),
+              child: RepaintBoundary(
+                child: GameWidget(
+                  game: _game,
+                  key: const ValueKey('tetris_tablet_widget'),
+                  loadingBuilder: (context) =>
+                      const Center(child: CircularProgressIndicator()),
+                ),
               ),
             ),
 
-            // الجزء السفلي (Next Piece + Controls)
-            Container(
-              // شيلنا الارتفاع الثابت أو خليناه MinHeight باستخدام Constraints
-              constraints: const BoxConstraints(minHeight: 140, maxHeight: 180),
-              padding: const EdgeInsets.all(12),
-              color: const Color(0xFF1D1E33),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  // لفينا الـ Next Piece بـ AspectRatio عشان نحافظ على شكل المربع
-                  Expanded(
-                      flex: 2,
-                      child: AspectRatio(
-                          aspectRatio: 1, child: _buildNextPieceSection())),
-                  const SizedBox(width: 15),
-                  // الـ Controls تاخد باقي المساحة
-                  Expanded(
-                      flex: 3,
-                      child: SingleChildScrollView(
-                          // أمان ضد الـ Overflow لو الزراير كتير
-                          scrollDirection: Axis.vertical,
-                          child: _buildControlsSection())),
-                ],
+            // 3. عزل الجزء السفلي (Next Piece + Controls)
+            RepaintBoundary(
+              child: Container(
+                constraints:
+                    const BoxConstraints(minHeight: 140, maxHeight: 180),
+                padding: const EdgeInsets.all(12),
+                color: const Color(0xFF1D1E33),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Expanded(
+                        flex: 2,
+                        child: AspectRatio(
+                            aspectRatio: 1, child: _buildNextPieceSection())),
+                    const SizedBox(width: 15),
+                    Expanded(
+                        flex: 3,
+                        child: SingleChildScrollView(
+                            scrollDirection: Axis.vertical,
+                            child: _buildControlsSection())),
+                  ],
+                ),
               ),
             ),
           ],
         ),
 
-        // زر كتم الصوت
+        // 4. عزل زر كتم الصوت (عشان الـ Hover والضغط ملمسش اللعبة)
         Positioned(
           top: 10,
           right: 10,
-          child: IconButton(
-            icon: Icon(
-              _isMuted ? Icons.volume_off : Icons.volume_up,
-              color: Colors.white,
-              size: 30,
+          child: RepaintBoundary(
+            child: IconButton(
+              icon: Icon(
+                _isMuted ? Icons.volume_off : Icons.volume_up,
+                color: Colors.white,
+                size: 30,
+              ),
+              onPressed: _toggleMute,
             ),
-            onPressed: _toggleMute,
           ),
         ),
 
         if (_isPaused) _buildPauseOverlay(),
+
+        // لا تنسى إضافة الـ GameOverDialog هنا برضه لو محتاجه للتابلت
+        if (_game.isGameOver)
+          GameOverDialog(
+            score: _game.score,
+            lines: _game.linesCleared,
+            level: _game.level,
+            onRestart: _restartGame,
+            onQuit: () => setState(() => _isGameRunning = false),
+          ),
       ],
     );
   }
@@ -335,120 +374,137 @@ class _TetrisHomePageState extends State<TetrisHomePage> {
   Widget _buildMobileLayout() {
     return Column(
       children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-          color: const Color(0xFF1D1E33),
-          child: SafeArea(
-            bottom: false,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                _buildStatCard('SCORE', '${_game.score}'),
-                Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Text(
-                      'NEXT',
-                      style: TextStyle(
-                        fontSize: 10,
-                        color: Colors.white70,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 1.2,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Container(
-                      width: 65,
-                      height: 65,
-                      padding: const EdgeInsets.all(8),
-                      // جوه دالة _buildNextPieceSection
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF24264D),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Center(
-                        child: AspectRatio(
-                          aspectRatio: 1,
-                          child: NextPieceDisplay(nextPiece: _game.nextPiece),
+        // الجزء العلوي: محمي بسور عشان السكور ميهنجش اللعبة
+        RepaintBoundary(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            color: const Color(0xFF1D1E33),
+            child: SafeArea(
+              bottom: false,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  _buildStatCard('SCORE', '${_game.score}'),
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text(
+                        'NEXT',
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: Colors.white70,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 1.2,
                         ),
                       ),
-                    ),
-                  ],
-                ),
-                _buildStatCard('LEVEL', '${_game.level}'),
-              ],
-            ),
-          ),
-        ),
-        Expanded(
-          child: RepaintBoundary(
-            // الحل السحري هنا: بيعزل رسم منطقة اللعب عن باقي الشاشة
-            child: Stack(
-              children: [
-                GameWidget(
-                  game: _game,
-                  // الـ key ده مهم جداً عشان فلاتر ميتلخبطش ويعيد بناء اللعبة من الصفر
-                  key: const ValueKey('tetris_game_widget'),
-                  loadingBuilder: (context) =>
-                      const Center(child: CircularProgressIndicator()),
-                ),
-                // الـ Overlay برضه لفيناه بـ RepaintBoundary عشان مياثرش على أداء اللعبة وهي شغالة
-                if (_isPaused) RepaintBoundary(child: _buildPauseOverlay()),
-              ],
+                      const SizedBox(height: 6),
+                      Container(
+                        width: 65,
+                        height: 65,
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF24264D),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Center(
+                          child: AspectRatio(
+                            aspectRatio: 1,
+                            child: NextPieceDisplay(nextPiece: _game.nextPiece),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  _buildStatCard('LEVEL', '${_game.level}'),
+                ],
+              ),
             ),
           ),
         ),
 
-        // تم إصلاح الـ Container السفلي هنا بإزالة const من الـ BoxDecoration والـ Shadow
-        Container(
-          padding: const EdgeInsets.only(bottom: 30, top: 15),
-          decoration: BoxDecoration(
-            // حذفنا const من هنا
-            color: const Color(0xFF1D1E33),
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(35),
-              topRight: Radius.circular(35),
-            ),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
+        // منطقة محرك اللعبة: معزولة تماماً في طبقة رندر لوحدها
+        Expanded(
+          child: Stack(
             children: [
-              _buildCircleControl(
-                Icons.rotate_right,
-                () => _game.rotate(),
-                Colors.orangeAccent,
-                "Rotate",
-                size: 65,
+              RepaintBoundary(
+                child: GameWidget(
+                  game: _game,
+                  key: const ValueKey('tetris_game_widget'),
+                  loadingBuilder: (context) =>
+                      const Center(child: CircularProgressIndicator()),
+                ),
               ),
-              const SizedBox(height: 10),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  _buildCircleControl(
-                    Icons.arrow_back,
-                    () => _game.moveLeft(),
-                    Colors.blueAccent,
-                    "Left",
-                    size: 65,
-                  ),
-                  _buildCircleControl(
-                    Icons.keyboard_double_arrow_down,
-                    () => _game.hardDrop(),
-                    Colors.redAccent,
-                    "DROP",
-                    size: 75,
-                  ),
-                  _buildCircleControl(
-                    Icons.arrow_forward,
-                    () => _game.moveRight(),
-                    Colors.blueAccent,
-                    "Right",
-                    size: 65,
-                  ),
-                ],
-              ),
+
+              // الـ Overlays بتترسم فوق "سور" اللعبة عشان متضغطش على الـ GPU
+              if (_isPaused) _buildPauseOverlay(),
+
+              if (_game.isGameOver)
+                GameOverDialog(
+                  score: _game.score,
+                  lines: _game.linesCleared,
+                  level: _game.level,
+                  onRestart: _restartGame,
+                  onQuit: () {
+                    setState(() {
+                      _isGameRunning = false;
+                    });
+                  },
+                ),
             ],
+          ),
+        ),
+
+        // منطقة التحكم: معزولة عشان ضغطات الزراير متأثرش على رندر المكعبات
+        RepaintBoundary(
+          child: Container(
+            padding: const EdgeInsets.only(bottom: 30, top: 15),
+            decoration: const BoxDecoration(
+              color: Color(0xFF1D1E33),
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(35),
+                topRight: Radius.circular(35),
+              ),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildCircleControl(
+                  Icons.rotate_right,
+                  () => _game.rotate(),
+                  Colors.orangeAccent,
+                  "Rotate",
+                  size: 65,
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    _buildCircleControl(
+                      Icons.arrow_back,
+                      () => _game.moveLeft(),
+                      Colors.blueAccent,
+                      "Left",
+                      size: 65,
+                    ),
+                    _buildCircleControl(
+                      Icons.keyboard_double_arrow_down,
+                      () => _game.hardDrop(),
+                      Colors.redAccent,
+                      "DROP",
+                      size: 75,
+                    ),
+                    _buildCircleControl(
+                      Icons.arrow_forward,
+                      () => _game.moveRight(),
+                      Colors.blueAccent,
+                      "Right",
+                      size: 65,
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ],
@@ -575,38 +631,40 @@ class _TetrisHomePageState extends State<TetrisHomePage> {
   }
 
   Widget _buildNextPieceSection() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(12), // زودنا البادينج عشان الشكل يبقي أنضف
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.3),
-        borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: Colors.white10),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Text(
-            'NEXT PIECE',
-            style: TextStyle(
-              fontSize: 12, // كبرنا الخط شوية طالما في مساحة
-              color: Colors.white70,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 1.1,
-            ),
-          ),
-          const SizedBox(height: 12),
-          // هنا التعديل الجوهري:
-          SizedBox(
-            height: 80, // بدل 40.. الـ 80 بكسل مساحة ممتازة للرسم
-            child: Center(
-              child: AspectRatio(
-                aspectRatio: 1, // بنجبر الرسمة تكون مربعة
-                child: NextPieceDisplay(nextPiece: _game.nextPiece),
+    return RepaintBoundary(
+      // "السور" اللي بيمنع الـ Next Piece تعطل باقي الشاشة
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.3),
+          borderRadius: BorderRadius.circular(15),
+          border: Border.all(color: Colors.white10),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'NEXT PIECE',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.white70,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 1.1,
               ),
             ),
-          ),
-        ],
+            const SizedBox(height: 12),
+            SizedBox(
+              height: 80,
+              child: Center(
+                child: AspectRatio(
+                  aspectRatio: 1,
+                  child: NextPieceDisplay(nextPiece: _game.nextPiece),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
