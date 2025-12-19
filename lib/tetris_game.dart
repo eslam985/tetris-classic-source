@@ -129,27 +129,34 @@ class TetrisGame extends FlameGame with KeyboardEvents, TapCallbacks {
   @override
   void update(double dt) {
     super.update(dt);
+
+    // 1. الحماية الأساسية
     if (isGameOver || isPaused || currentPiece == null) return;
 
+    // 2. معالجة الأنميشن (المسح)
     if (isAnimating) {
       clearAnimationTime += dt;
       if (clearAnimationTime >= 0.3) {
-        // قللنا الوقت لـ 0.3 عشان السلاسة
+        // أهم خطوة: المسح لازم يتم "خارج" الفريم اللي فيه حركة
         _performLineClear();
         isAnimating = false;
         clearAnimationTime = 0;
+        timeSinceLastFall =
+            0; // "صفر" عداد الحركة عشان القطعة ما تنطش فجأة بعد المسح
       }
-      // شيلنا الـ return عشان نسمح لباقي العمليات بالاستمرار لو محتاج
-      return;
+      return; // هنا الـ return ضرورية جداً عشان المعالج يركز في الأنميشن بس
     }
 
+    // 3. حركة القطعة (Physics)
     timeSinceLastFall += dt;
 
-    // التعديل الجوهري: استخدام while بدل if للتعامل مع اللاج المفاجئ
-    // ده بيضمن إن لو الجهاز هنج لحظة، القطعة تعوض مكانها بسرعة
-    while (timeSinceLastFall >= fallSpeed) {
+    // الحقيقة الصارمة: تحديد حد أقصى للـ while
+    // عشان لو الجهاز هنج دقيقة ما يحاولش ينفذ 1000 حركة في فريم واحد
+    int safetyCounter = 0;
+    while (timeSinceLastFall >= fallSpeed && safetyCounter < 3) {
       moveDown();
-      timeSinceLastFall -= fallSpeed; // اطرح الوقت بدل ما تصفرّه
+      timeSinceLastFall -= fallSpeed;
+      safetyCounter++;
     }
   }
 
@@ -390,48 +397,49 @@ class TetrisGame extends FlameGame with KeyboardEvents, TapCallbacks {
   }
 
   void _performLineClear() {
+    if (linesToClear.isEmpty) return;
+
     int numLines = linesToClear.length;
     linesCleared += numLines;
 
-    linesToClear.sort();
+    // 1. منطق المسح الذكي
+    final newGrid = grid.indexed
+        .where((entry) => !linesToClear.contains(entry.$1))
+        .map((entry) => entry.$2)
+        .toList();
 
-    for (final line in linesToClear.reversed) {
-      grid.removeAt(line);
-      grid.insert(0, List.generate(gridWidth, (_) => 0));
+    // 2. تعويض الصفوف
+    while (newGrid.length < gridHeight) {
+      newGrid.insert(0, List.generate(gridWidth, (_) => 0));
     }
 
-    if (numLines > 0) {
-      AudioManager.playLineClear();
-      score += _calculateScore(numLines);
-      level = 1 + (linesCleared ~/ 5);
-      // السرعة بتبدأ أبطأ (1.0) وبتزيد ببطء شديد جداً (0.05)
-      fallSpeed = max(0.5, 1.0 - (level - 1) * 0.05);
+    grid = newGrid;
 
-      // في دالة moveDown أو الـ Update
-      if (timeSinceLastFall >= fallSpeed) {
-        moveDown();
-        timeSinceLastFall = 0;
-        // شيل onGameStateChanged من هنا لو كانت موجودة
-      }
-    }
+    // 3. تحديث البيانات
+    AudioManager.playLineClear();
+    score += _calculateScore(numLines);
+    level = 1 + (linesCleared ~/ 5);
+    fallSpeed = max(0.2, 1.0 - (level - 1) * 0.05);
 
     linesToClear.clear();
+
+    // السطر الناقص والضروري جداً:
+    generateNewPiece(); // من غير ده، اللعبة هتثبت على الشبكة الفاضية!
   }
 
   int _calculateScore(int lines) {
-    // 1. حماية ضد الأرقام غير المتوقعة
+    // 1. الحساب فقط (بدون تحديث متغيرات خارجية)
     if (lines <= 0) return 0;
 
-    // 2. حساب السكور (الـ 800 للـ Tetris الأصلي)
-    const lineScores = [0, 100, 300, 500, 800];
-    final addedScore = (lines < lineScores.length)
-        ? lineScores[lines] * level
-        : 1200 * level; // سكور احتياطي لو مسح أكتر من 4
+    // السكور الأصلي لنظام نينتندو (Nintendo Scoring System)
+    const lineScores = [0, 40, 100, 300, 1200];
 
-    // 3. تحديث الـ Notifier فوراً عشان الـ UI يحس بالتغيير بدون لاج
-    score += addedScore; // دي بتنادي الـ setter اللي بيحدث الـ Notifier
+    int baseScore = (lines < lineScores.length)
+        ? lineScores[lines]
+        : 2000; // لو مسح أكتر من 4 بضربة واحدة
 
-    return addedScore;
+    // 2. ترجيع القيمة فقط
+    return baseScore * level;
   }
 
   void startGame() {
@@ -509,23 +517,26 @@ class TetrisGame extends FlameGame with KeyboardEvents, TapCallbacks {
   void hardDrop() {
     if (isGameOver || isPaused || currentPiece == null) return;
 
-    int dropDistance = 0; // عرفناه هنا
+    int dropDistance = 0;
 
-    while (true) {
-      final newPiece = currentPiece!.copyWith(y: currentPiece!.y + 1);
-      if (isValidPosition(newPiece)) {
-        currentPiece = newPiece;
-        dropDistance++; // زودناه هنا
-      } else {
-        break;
-      }
+    // 1. حساب أقصى مسافة ممكنة بدون إنشاء Objects كتير
+    // بنجرب ننزل لتحت لحد ما نخبط في حاجة
+    while (isValidPosition(
+        currentPiece!.copyWith(y: currentPiece!.y + dropDistance + 1))) {
+      dropDistance++;
     }
 
-    // استخدمه هنا عشان تشيل الـ Warning وتدي سكور إضافي
+    // 2. تحديث مكان القطعة "مرة واحدة" فقط
     if (dropDistance > 0) {
-      score += dropDistance * 2; // اللاعب ياخد نقطتين عن كل بلاطة نزلها بسرعة
+      currentPiece = currentPiece!.copyWith(y: currentPiece!.y + dropDistance);
+      score += dropDistance * 2; // مكافأة الهارد دروب
+
+      // 3. صوت الـ Drop لازم يشتغل هنا فوراً
+      // عشان اللاعب يحس بقوة الـ Hard Drop
+      AudioManager.playDrop();
     }
 
+    // 4. التثبيت
     lockPiece();
   }
 

@@ -4,34 +4,48 @@ class AudioManager {
   static bool isMuted = false;
   static double volume = 0.7;
 
-  // تعريف الـ Pools للأصوات المتكررة
+  // 1. تعريف الـ Pools لكل المؤثرات الصوتية لضمان استجابة لحظية (Zero Latency)
   static AudioPool? _movePool;
   static AudioPool? _rotatePool;
+  static AudioPool? _dropPool;
+  static AudioPool? _lineClearPool;
+  static AudioPool? _gameOverPool;
 
   static Future<void> loadSounds() async {
-    // 1. تحميل الموسيقى والأصوات التقيلة
-    await FlameAudio.audioCache.loadAll([
-      'line_clear.mp3',
-      'game_over.mp3',
-      'theme.mp3',
-      'drop.mp3',
-    ]);
+    // 2. تحميل الموسيقى الخلفية في الكاش (لأنها ملف طويل)
+    await FlameAudio.audioCache.loadAll(['theme.mp3']);
 
-    // 2. إنشاء Pool للأصوات اللي بتشتغل كتير ورا بعض
+    // 3. إنشاء الـ Pools للمؤثرات السريعة
+    // maxPlayers: عدد القنوات المفتوحة في نفس الوقت عشان الأصوات ما تقطعش بعضها
     _movePool = await FlameAudio.createPool(
       'move.mp3',
-      maxPlayers: 3, // أقصى عدد أصوات يشتغلوا في نفس اللحظة
+      maxPlayers: 4,
     );
 
     _rotatePool = await FlameAudio.createPool(
       'rotate.mp3',
       maxPlayers: 2,
     );
+
+    _dropPool = await FlameAudio.createPool(
+      'drop.mp3',
+      maxPlayers: 2,
+    );
+
+    _lineClearPool = await FlameAudio.createPool(
+      'line_clear.mp3',
+      maxPlayers: 2,
+    );
+
+    _gameOverPool = await FlameAudio.createPool(
+      'game_over.mp3',
+      maxPlayers: 1,
+    );
   }
 
+  // استخدام .start() مع الـ Pool هو السر في ليفل 8
   static void playMove() {
     if (isMuted || _movePool == null) return;
-    // الـ Pool أسرع بـ 10 مرات من play العادية
     _movePool!.start(volume: volume * 0.3);
   }
 
@@ -41,19 +55,18 @@ class AudioManager {
   }
 
   static void playDrop() {
-    if (isMuted) return;
-    // الـ drop مش محتاج pool لأنه بيحصل مرة واحدة كل فترة
-    FlameAudio.play('drop.mp3', volume: volume * 0.5);
+    if (isMuted || _dropPool == null) return;
+    _dropPool!.start(volume: volume * 0.5);
   }
 
   static void playLineClear() {
-    if (isMuted) return;
-    FlameAudio.play('line_clear.mp3', volume: volume);
+    if (isMuted || _lineClearPool == null) return;
+    _lineClearPool!.start(volume: volume);
   }
 
   static void playGameOver() {
-    if (isMuted) return;
-    FlameAudio.play('game_over.mp3', volume: volume);
+    if (isMuted || _gameOverPool == null) return;
+    _gameOverPool!.start(volume: volume);
   }
 
   static void playBackgroundMusic() {
