@@ -22,4 +22,9 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
-    - assets/audio/
+    - assets/audio/theme.mp3
+    - assets/audio/line_clear.mp3
+    - assets/audio/game_over.mp3
+    - assets/audio/move.mp3
+    - assets/audio/rotate.mp3
+    - assets/audio/drop.mp3
