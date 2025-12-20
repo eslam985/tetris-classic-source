@@ -489,7 +489,7 @@ class TetrisGame extends FlameGame
     level = 1 + (linesCleared ~/ 5);
 
     // زيادة سرعة السقوط مع كل ليفل (بحد أدنى 0.4 ثانية)
-    fallSpeed = max(0.4, 1.0 - (level - 1) * 0.05);
+    fallSpeed = max(0.4, 1.0 - (level - 1) * 0.04);
 
     // تنظيف قائمة الصفوف الممسوحة عشان نستعد للمرة الجاية
     linesToClear.clear();

@@ -57,9 +57,17 @@ class AudioManager {
 
   static void playLineClear() {
     if (isMuted) return;
+
+    // الحل هنا: استخدمنا دالة play العادية بس اتأكدنا إن الـ bgm لسه شغال
     FlameAudio.play('line_clear.mp3', volume: volume);
+
+    // حركة صايعة للموبايل: لو الموسيقى وقفت لسبب ما، رجعها
     if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
       HapticFeedback.heavyImpact();
+      // تأكيد تشغيل الموسيقى لو حصل "Focus Loss"
+      if (!FlameAudio.bgm.isPlaying && !isMuted) {
+        FlameAudio.bgm.resume();
+      }
     }
   }
 

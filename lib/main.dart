@@ -212,7 +212,6 @@ class _TetrisHomePageState extends State<TetrisHomePage> {
                 child: Stack(
                   alignment: Alignment.center,
                   children: [
-                    // محرك اللعبة معزول وجاهز
                     RepaintBoundary(
                       child: ClipRect(
                         child: GameWidget(
@@ -226,17 +225,27 @@ class _TetrisHomePageState extends State<TetrisHomePage> {
                         ),
                       ),
                     ),
+
                     if (_isPaused) _buildPauseOverlay(),
 
-                    // ضيف الـ GameOverDialog هنا برضه لو محتاجه للديسكتوب
-                    if (_game.isGameOver)
-                      GameOverDialog(
-                        score: _game.score,
-                        lines: _game.linesCleared,
-                        level: _game.level,
-                        onRestart: _restartGame,
-                        onQuit: () => setState(() => _isGameRunning = false),
-                      ),
+                    // التعديل السحري هنا عشان يظهر تلقائي
+                    ValueListenableBuilder<bool>(
+                      valueListenable:
+                          _game.gameOverNotifier, // بيراقب لحظة الخسارة
+                      builder: (context, isGameOver, child) {
+                        if (isGameOver) {
+                          return GameOverDialog(
+                            score: _game.score,
+                            lines: _game.linesCleared,
+                            level: _game.level,
+                            onRestart: _restartGame,
+                            onQuit: () =>
+                                setState(() => _isGameRunning = false),
+                          );
+                        }
+                        return const SizedBox.shrink();
+                      },
+                    ),
                   ],
                 ),
               ),
@@ -271,21 +280,27 @@ class _TetrisHomePageState extends State<TetrisHomePage> {
       children: [
         Column(
           children: [
-            // 1. عزل الجزء العلوي (Stats)
+            // 1. عزل الجزء العلوي (Stats) مع إضافة مراقب لتحديث السكور تلقائياً
             RepaintBoundary(
-              child: Container(
-                height: 70,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                color: const Color(0xFF1D1E33),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    _buildStatCard('SCORE', '${_game.score}'),
-                    _buildStatCard('LEVEL', '${_game.level}'),
-                    _buildStatCard('LINES', '${_game.linesCleared}'),
-                  ],
-                ),
+              child: AnimatedBuilder(
+                animation:
+                    _game, // بيراقب اللعبة عشان السكور واللفل يتحدثوا فوراً
+                builder: (context, child) {
+                  return Container(
+                    height: 70,
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    color: const Color(0xFF1D1E33),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        _buildStatCard('SCORE', '${_game.score}'),
+                        _buildStatCard('LEVEL', '${_game.level}'),
+                        _buildStatCard('LINES', '${_game.linesCleared}'),
+                      ],
+                    ),
+                  );
+                },
               ),
             ),
 
@@ -328,7 +343,7 @@ class _TetrisHomePageState extends State<TetrisHomePage> {
           ],
         ),
 
-        // 4. عزل زر كتم الصوت (عشان الـ Hover والضغط ملمسش اللعبة)
+        // 4. عزل زر كتم الصوت
         Positioned(
           top: 10,
           right: 10,
@@ -344,17 +359,25 @@ class _TetrisHomePageState extends State<TetrisHomePage> {
           ),
         ),
 
-        if (_isPaused) _buildPauseOverlay(),
+        // شاشة الـ Pause
+        if (_isPaused && !_game.isGameOver) _buildPauseOverlay(),
 
-        // لا تنسى إضافة الـ GameOverDialog هنا برضه لو محتاجه للتابلت
-        if (_game.isGameOver)
-          GameOverDialog(
-            score: _game.score,
-            lines: _game.linesCleared,
-            level: _game.level,
-            onRestart: _restartGame,
-            onQuit: () => setState(() => _isGameRunning = false),
-          ),
+        // 5. الحل الجذري للجيم أوفر التلقائي (الرادار)
+        ValueListenableBuilder<bool>(
+          valueListenable: _game.gameOverNotifier,
+          builder: (context, isGameOver, child) {
+            if (isGameOver) {
+              return GameOverDialog(
+                score: _game.score,
+                lines: _game.linesCleared,
+                level: _game.level,
+                onRestart: _restartGame,
+                onQuit: () => setState(() => _isGameRunning = false),
+              );
+            }
+            return const SizedBox.shrink();
+          },
+        ),
       ],
     );
   }
@@ -379,7 +402,8 @@ class _TetrisHomePageState extends State<TetrisHomePage> {
                       IconButton(
                         icon: Icon(_isPaused ? Icons.play_arrow : Icons.pause,
                             color: Colors.white),
-                        onPressed: () => setState(() => _isPaused = !_isPaused),
+                        onPressed:
+                            _togglePause, // نادى الدالة الجاهزة اللي عندك وشكراً
                       ),
                       IconButton(
                         icon: const Icon(Icons.refresh, color: Colors.white),
@@ -435,21 +459,30 @@ class _TetrisHomePageState extends State<TetrisHomePage> {
                 ),
               ),
 
-              // الـ Overlays بتترسم فوق "سور" اللعبة عشان متضغطش على الـ GPU
+              // الـ Pause بيفضل زي ما هو لأنه مربوط بـ setState الزراير
               if (_isPaused) _buildPauseOverlay(),
 
-              if (_game.isGameOver)
-                GameOverDialog(
-                  score: _game.score,
-                  lines: _game.linesCleared,
-                  level: _game.level,
-                  onRestart: _restartGame,
-                  onQuit: () {
-                    setState(() {
-                      _isGameRunning = false;
-                    });
-                  },
-                ),
+              // التعديل السحري هنا:
+              ValueListenableBuilder<bool>(
+                valueListenable:
+                    _game.gameOverNotifier, // بيراقب المتغير ده لحظة بلحظة
+                builder: (context, isGameOver, child) {
+                  if (isGameOver) {
+                    return GameOverDialog(
+                      score: _game.score,
+                      lines: _game.linesCleared,
+                      level: _game.level,
+                      onRestart: _restartGame,
+                      onQuit: () {
+                        setState(() {
+                          _isGameRunning = false;
+                        });
+                      },
+                    );
+                  }
+                  return const SizedBox.shrink(); // لو لسه مخصرش ميرسمش حاجة
+                },
+              ),
             ],
           ),
         ),
