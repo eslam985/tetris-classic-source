@@ -6,7 +6,8 @@ import 'package:flutter/services.dart';
 import 'tetromino.dart';
 import 'audio_manager.dart';
 
-class TetrisGame extends FlameGame with KeyboardEvents, TapCallbacks {
+class TetrisGame extends FlameGame
+    with KeyboardEvents, TapCallbacks, ChangeNotifier {
   Vector2 gameOffset = Vector2.zero();
 
   // 1. التعديل الجوهري: استبدال الـ Callback والـ variables العادية بـ Notifiers
@@ -43,7 +44,7 @@ class TetrisGame extends FlameGame with KeyboardEvents, TapCallbacks {
   set isGameOver(bool value) => gameOverNotifier.value = value;
 
   int linesCleared = 0;
-  double fallSpeed = 0.8;
+  double fallSpeed = 1.0;
   double timeSinceLastFall = 0;
   bool isPaused = false;
 
@@ -76,6 +77,22 @@ class TetrisGame extends FlameGame with KeyboardEvents, TapCallbacks {
     ..color = Colors.white.withValues(alpha: 0.2)
     ..style = PaintingStyle.fill;
 
+  int getGhostY() {
+    if (currentPiece == null) return 0;
+
+    // بنبدأ من مكان القطعة الحالي
+    int ghostY = currentPiece!.y;
+
+    // بنجرب ننزل لتحت وهمياً باستخدام testY
+    // طول ما المكان اللي تحتنا (ghostY + 1) فاضي، بنزود الـ ghostY
+    while (isValidPosition(currentPiece!,
+        testX: currentPiece!.x, testY: ghostY + 1)) {
+      ghostY++;
+    }
+
+    return ghostY;
+  }
+
   @override
   Color backgroundColor() => const Color(0xFF1a1a2e);
   @override
@@ -97,22 +114,27 @@ class TetrisGame extends FlameGame with KeyboardEvents, TapCallbacks {
   }
 
   void _calculateBoardSize() {
-    // هوامش صغيرة جداً عشان ندي مساحة للعبة تكبر
-    const double verticalPadding = 60.0;
-    const double horizontalPadding = 20.0;
+    // 1. هوامش أمان بسيطة جداً (أقل ما يمكن) عشان اللعبة تاخد حيزها
+    const double horizontalMargin = 10.0;
+    const double verticalMargin = 20.0;
 
-    final availableWidth = size.x - horizontalPadding;
-    final availableHeight = size.y - verticalPadding;
+    // 2. حساب المساحة الفعلية المتاحة
+    final availableWidth = size.x - horizontalMargin;
+    final availableHeight = size.y - verticalMargin;
 
+    // 3. السطر ده هو أهم سطر.. الـ cellSize هياخد أكبر قيمة ممكنة
+    // بحيث يملأ إما عرض الشاشة أو طولها بالكامل
     cellSize = min(availableWidth / gridWidth, availableHeight / gridHeight);
+
+    // 4. تحديد حجم اللوحة بناءً على الـ cellSize الجديد
     boardSize = Vector2(gridWidth * cellSize, gridHeight * cellSize);
 
+    // 5. التوسطن العبقري (Mathematical Centering)
+    // بنطرح حجم اللعبة من حجم الشاشة ونقسم على 2.. كدة مستحيل تترحل بكسل واحد
     boardStartX = (size.x - boardSize.x) / 2;
+    boardStartY = (size.y - boardSize.y) / 2;
 
-    // نرفعها 30 بكسل بس عن المركز
-    boardStartY = (size.y - boardSize.y) / 2 - 30;
-
-    if (boardStartY < 5) boardStartY = 5;
+    // 6. تحديث الـ Offset النهائي
     gameOffset = Vector2(boardStartX, boardStartY);
   }
 
@@ -163,29 +185,61 @@ class TetrisGame extends FlameGame with KeyboardEvents, TapCallbacks {
   @override
   void render(Canvas canvas) {
     super.render(canvas);
-    if (boardSize.x == 0) _calculateBoardSize();
 
+    if (boardSize.x == 0) {
+      _calculateBoardSize();
+    }
+
+    // --- السطر السحري هنا ---
+    // ده بيخلي الـ Canvas يبدأ يرسم من الـ Offset اللي حسبناه (اللي فيه الـ 120 بكسل فرق)
     canvas.save();
     canvas.translate(gameOffset.x, gameOffset.y);
+    // الآن كل الرسم اللي تحت هيترسم "نسبةً" للنقطة الجديدة
+    // ملحوظة: لازم نستبدل boardStartX و boardStartY بـ 0
+    // لأن الـ translate هي اللي قامت بالمهمة دي خلاص
 
-    // 1. رسم الخلفية مرة واحدة
+    // 1. رسم الخلفية
     canvas.drawRect(
-        Rect.fromLTWH(0, 0, boardSize.x, boardSize.y), backgroundPaint);
+      Rect.fromLTWH(0, 0, boardSize.x, boardSize.y),
+      backgroundPaint,
+    );
 
-    // 2. رسم الإطار الخارجي (مهم جداً للرؤية)
-    canvas.drawRect(Rect.fromLTWH(0, 0, boardSize.x, boardSize.y), borderPaint);
+    // 2. رسم خطوط الشبكة الطولية
+    for (int i = 0; i <= gridWidth; i++) {
+      final x = i * cellSize;
+      canvas.drawLine(
+        Offset(x, 0),
+        Offset(x, boardSize.y),
+        gridPaint,
+      );
+    }
 
-    // 3. تحسين رسم المربعات المستقرة (رسم المشغول فقط)
+    // 3. رسم خطوط الشبكة العرضية
+    for (int i = 0; i <= gridHeight; i++) {
+      final y = i * cellSize;
+      canvas.drawLine(
+        Offset(0, y),
+        Offset(boardSize.x, y),
+        gridPaint,
+      );
+    }
+
+    // 4. رسم الإطار الخارجي
+    canvas.drawRect(
+      Rect.fromLTWH(0, 0, boardSize.x, boardSize.y),
+      borderPaint,
+    );
+
+    // 5. رسم المربعات المستقرة (Grid)
     for (int y = 0; y < gridHeight; y++) {
       for (int x = 0; x < gridWidth; x++) {
         if (grid[y][x] != 0) {
-          // لو الخانة فيها مكعب فعلاً ارسمه
           _drawCell(canvas, x, y, grid[y][x]);
         }
       }
     }
 
-    // 4. رسم القطعة اللي بتتحرك دلوقتي
+    // 6. رسم القطعة الحالية (عدلنا الـ parameters لـ 0,0)
     if (currentPiece != null) {
       currentPiece!.render(canvas, 0, 0, cellSize);
     }
@@ -194,12 +248,18 @@ class TetrisGame extends FlameGame with KeyboardEvents, TapCallbacks {
       _drawLineClearAnimation(canvas);
     }
 
-    canvas.restore();
+    canvas
+        .restore(); // بنرجع الـ canvas لحالته الطبيعية عشان نكتب التكست في نص الشاشة الحقيقي
 
-    // 5. رسم نصوص الحالة
+    // 7. رسم نصوص الحالة (تفضل في نص الشاشة الكلي)
     if (isGameOver) {
       _drawCenteredText(
           canvas, "GAME OVER", 32, Colors.redAccent, size.x / 2, size.y / 2);
+      _drawCenteredText(canvas, "Tap to restart", 18, Colors.white70,
+          size.x / 2, size.y / 2 + 40);
+    } else if (isPaused) {
+      _drawCenteredText(
+          canvas, "PAUSED", 32, Colors.yellow, size.x / 2, size.y / 2);
     }
   }
 
@@ -310,23 +370,26 @@ class TetrisGame extends FlameGame with KeyboardEvents, TapCallbacks {
     // مفيش داعي لمناداة onGameStateChanged خلاص
   }
 
-  bool isValidPosition(Tetromino piece) {
-    // 1. استخراج الـ blocks في متغير محلي عشان نوفر الوصول المتكرر للـ Object
+  bool isValidPosition(Tetromino piece, {int? testX, int? testY}) {
+    // 1. استخراج الـ blocks
     final blocks = piece.blocks;
-    final px = piece.x;
-    final py = piece.y;
+
+    // السر هنا: لو بعتنا testX أو testY (في حالة الخيال) هنستخدمهم
+    // لو مبعتناش (في حالة الحركة العادية) هنستخدم x و y بتوع القطعة
+    final px = testX ?? piece.x;
+    final py = testY ?? piece.y;
 
     for (int i = 0; i < blocks.length; i++) {
       final block = blocks[i];
-      final gx = px + block.dx;
-      final gy = py + block.dy;
+      final gx = px + block.dx.toInt(); // التأكد إنها int
+      final gy = py + block.dy.toInt();
 
-      // 2. التحقق من الحدود (أسرع عملية رفض)
+      // 2. التحقق من الحدود
       if (gx < 0 || gx >= gridWidth || gy >= gridHeight) {
         return false;
       }
 
-      // 3. التحقق من التصادم مع المكعبات المستقرة (فقط لو القطعة جوه حدود الـ Grid الطولية)
+      // 3. التحقق من التصادم مع المكعبات المستقرة
       if (gy >= 0 && grid[gy][gx] != 0) {
         return false;
       }
@@ -397,34 +460,45 @@ class TetrisGame extends FlameGame with KeyboardEvents, TapCallbacks {
   }
 
   void _performLineClear() {
+    // لو مفيش صفوف مكتملة، اخرج فوراً وما تعملش حاجة
     if (linesToClear.isEmpty) return;
 
     int numLines = linesToClear.length;
     linesCleared += numLines;
 
-    // 1. منطق المسح الذكي
+    // 1. منطق المسح الذكي: بنفلتر الشبكة ونشيل الصفوف اللي رقمها موجود في قائمة المسح
     final newGrid = grid.indexed
         .where((entry) => !linesToClear.contains(entry.$1))
         .map((entry) => entry.$2)
         .toList();
 
-    // 2. تعويض الصفوف
+    // 2. تعويض الصفوف: بنضيف صفوف فاضية (أصفار) في أعلى الشبكة بدل اللي اتمسحت
     while (newGrid.length < gridHeight) {
       newGrid.insert(0, List.generate(gridWidth, (_) => 0));
     }
 
     grid = newGrid;
 
-    // 3. تحديث البيانات
-    AudioManager.playLineClear();
-    score += _calculateScore(numLines);
-    level = 1 + (linesCleared ~/ 5);
-    fallSpeed = max(0.2, 1.0 - (level - 1) * 0.05);
+    // 3. تحديث البيانات (هنا مربط الفرس للسكور)
+    AudioManager.playLineClear(); // تشغيل صوت المسح
 
+    // تحديث الـ Notifier مباشرة هو اللي بيجبر الـ UI يغير الرقم فوراً
+    scoreNotifier.value += _calculateScore(numLines);
+
+    // حساب المستوى الجديد: كل 5 صفوف بليفل جديد
+    level = 1 + (linesCleared ~/ 5);
+
+    // زيادة سرعة السقوط مع كل ليفل (بحد أدنى 0.4 ثانية)
+    fallSpeed = max(0.4, 1.0 - (level - 1) * 0.05);
+
+    // تنظيف قائمة الصفوف الممسوحة عشان نستعد للمرة الجاية
     linesToClear.clear();
 
-    // السطر الناقص والضروري جداً:
-    generateNewPiece(); // من غير ده، اللعبة هتثبت على الشبكة الفاضية!
+    // السطر ده بيبعت إشارة لكل الـ Widgets إن "الحالة اتغيرت.. ارسموا نفسكم تاني"
+    notifyListeners();
+
+    // توليد قطعة جديدة تبدأ تنزل من فوق
+    generateNewPiece();
   }
 
   int _calculateScore(int lines) {
@@ -447,7 +521,7 @@ class TetrisGame extends FlameGame with KeyboardEvents, TapCallbacks {
     score = 0;
     linesCleared = 0;
     level = 1;
-    fallSpeed = 0.8;
+    fallSpeed = 1.0;
     isGameOver = false;
     isPaused = false;
     isAnimating = false;

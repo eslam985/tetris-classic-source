@@ -85,11 +85,12 @@ class _TetrisHomePageState extends State<TetrisHomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0A0E21),
+      // 1. خلينا اللون أسود صريح عشان يليق مع اللعبة
+      backgroundColor: Colors.black,
       body: SafeArea(
+        // 2. شيلنا الـ Padding الـ 40 اللي تحت عشان نستغل كل ملي في الشاشة
         child: Padding(
-          // التعديل هنا: بنضيف مساحة 40 بكسل من تحت عشان نرفع الكنترولات فوق التاسك بار
-          padding: const EdgeInsets.only(bottom: 40),
+          padding: EdgeInsets.zero,
           child: LayoutBuilder(
             builder: (context, constraints) {
               final screenWidth = constraints.maxWidth;
@@ -364,54 +365,63 @@ class _TetrisHomePageState extends State<TetrisHomePage> {
         // الجزء العلوي: محمي بسور عشان السكور ميهنجش اللعبة
         RepaintBoundary(
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 5),
             color: const Color(0xFF1D1E33),
             child: SafeArea(
               bottom: false,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: CrossAxisAlignment.center,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  _buildStatCard('SCORE', '${_game.score}'),
-                  Column(
-                    mainAxisSize: MainAxisSize.min,
+                  // سطر التحكم (Pause & Restart)
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
                     children: [
-                      const Text(
-                        'NEXT',
-                        style: TextStyle(
-                          fontSize: 10,
-                          color: Colors.white70,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 1.2,
-                        ),
+                      IconButton(
+                        icon: Icon(_isPaused ? Icons.play_arrow : Icons.pause,
+                            color: Colors.white),
+                        onPressed: () => setState(() => _isPaused = !_isPaused),
                       ),
-                      const SizedBox(height: 6),
-                      Container(
-                        width: 65,
-                        height: 65,
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF24264D),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Center(
-                          child: AspectRatio(
-                            aspectRatio: 1,
-                            // التعديل هنا: غيرنا اسم البراميتر وبعتنا الـ Notifier نفسه
-                            child: NextPieceDisplay(
-                                nextPieceNotifier: _game.nextPieceNotifier),
-                          ),
-                        ),
+                      IconButton(
+                        icon: const Icon(Icons.refresh, color: Colors.white),
+                        onPressed: _restartGame,
                       ),
                     ],
                   ),
-                  _buildStatCard('LEVEL', '${_game.level}'),
+                  // سطر السكور والـ NEXT والـ LEVEL
+                  AnimatedBuilder(
+                    animation: _game,
+                    builder: (context, child) {
+                      return Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          // السكور على الشمال
+                          _buildStatCard('SCORE', '${_game.score}'),
+
+                          // الـ Next Piece في النص بالضبط
+                          SizedBox(
+                            width: 70,
+                            height: 70,
+                            child: Center(
+                              child: AspectRatio(
+                                aspectRatio: 1,
+                                child: NextPieceDisplay(
+                                  nextPieceNotifier: _game.nextPieceNotifier,
+                                ),
+                              ),
+                            ),
+                          ),
+
+                          // اللفل على اليمين
+                          _buildStatCard('LEVEL', '${_game.level}'),
+                        ],
+                      );
+                    },
+                  ),
                 ],
               ),
             ),
           ),
         ),
-
         // منطقة محرك اللعبة: معزولة تماماً في طبقة رندر لوحدها
         Expanded(
           child: Stack(
@@ -502,18 +512,15 @@ class _TetrisHomePageState extends State<TetrisHomePage> {
 
   Widget _buildStatsSection() {
     return Container(
-      // استخدمنا الـ Width الـ infinity عشان نملأ الـ Sidebar بالكامل
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
         color: Colors.black.withValues(alpha: 0.3),
-        borderRadius: BorderRadius.circular(15), // كيرف أنعم شوية
-        border: Border.all(
-            color: Colors.white.withValues(alpha: 0.05)), // برواز خفي
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
       ),
       child: Column(
-        crossAxisAlignment:
-            CrossAxisAlignment.start, // بلاش Stretch عشان نتحكم في الهوامش
+        crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
           Row(
@@ -534,15 +541,37 @@ class _TetrisHomePageState extends State<TetrisHomePage> {
           ),
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 8.0),
-            child:
-                Divider(color: Colors.white10, height: 1), // فاصل بسيط للشياكة
+            child: Divider(color: Colors.white10, height: 1),
           ),
-          _buildStatRow(
-              'SCORE', _game.score.toString().padLeft(6, '0')), // تنسيق الأرقام
+
+          // 1. تحديث السكور لحظياً
+          ValueListenableBuilder<int>(
+            valueListenable: _game.scoreNotifier,
+            builder: (context, scoreValue, child) {
+              return _buildStatRow(
+                  'SCORE', scoreValue.toString().padLeft(6, '0'));
+            },
+          ),
+
           const SizedBox(height: 8),
-          _buildStatRow('LINES', '${_game.linesCleared}'),
+
+          // 2. تحديث عدد الصفوف (بما إنه متغير عادي مش Notifier، هنخليه يتبع السكور مؤقتاً)
+          AnimatedBuilder(
+            animation: _game.scoreNotifier,
+            builder: (context, child) {
+              return _buildStatRow('LINES', '${_game.linesCleared}');
+            },
+          ),
+
           const SizedBox(height: 8),
-          _buildStatRow('LEVEL', '${_game.level}'),
+
+          // 3. تحديث اللفل لحظياً
+          ValueListenableBuilder<int>(
+            valueListenable: _game.levelNotifier,
+            builder: (context, levelValue, child) {
+              return _buildStatRow('LEVEL', '$levelValue');
+            },
+          ),
         ],
       ),
     );

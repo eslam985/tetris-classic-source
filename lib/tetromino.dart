@@ -135,30 +135,28 @@ class Tetromino {
     ];
   }
 
-  // 2. دالة الرسم المحسنة للأداء العالي (Level 8 Ready)
-  void render(Canvas canvas, double startX, double startY, double cellSize) {
-    _fillPaint.color = colors[type]!;
-    _highlightPaint.color = Colors.white.withValues(alpha: 0.3);
+  void render(Canvas canvas, double startX, double startY, double cellSize,
+      {double yOffset = 0, double opacity = 1.0}) {
+    // استخدام withValues عشان نهرب من تحذيرات الـ deprecated
+    _fillPaint.color = colors[type]!.withValues(alpha: opacity);
+    _borderPaint.color = Colors.black.withValues(alpha: opacity);
+    _highlightPaint.color = Colors.white.withValues(alpha: 0.3 * opacity);
 
     for (final block in blocks) {
+// التعديل هنا: استخدمنا dx و dy بدل x و y
       final cellX = startX + (x + block.dx) * cellSize;
-      final cellY = startY + (y + block.dy) * cellSize;
+      final cellY = startY + (y + block.dy + yOffset) * cellSize;
+
       final rect =
           Rect.fromLTWH(cellX + 0.5, cellY + 0.5, cellSize - 1, cellSize - 1);
 
-      // رسم الجسم الأساسي
+      // رسم الجسم والحدود
       canvas.drawRect(rect, _fillPaint);
-
-      // رسم الحدود (بدون إنشاء كائن Paint جديد)
       canvas.drawRect(rect, _borderPaint);
 
       // رسم اللمعة الجمالية
       canvas.drawRect(
         Rect.fromLTWH(cellX + 2, cellY + 2, cellSize - 6, 2),
-        _highlightPaint,
-      );
-      canvas.drawRect(
-        Rect.fromLTWH(cellX + 2, cellY + 2, 2, cellSize - 6),
         _highlightPaint,
       );
     }
